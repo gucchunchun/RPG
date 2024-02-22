@@ -72,6 +72,8 @@ COLLISION_MAP.forEach((row, rowIndex)=>{
 // Images
 const IMAGE_MAP = new Image();
 IMAGE_MAP.src = './img/map/map.png';
+const IMAGE_FOREGROUND_OBJECT = new Image();
+IMAGE_FOREGROUND_OBJECT.src = './img/map/ForegroundObjects.png';
 const CHARACTER_GIRL = new Image();
 CHARACTER_GIRL.src = './img/character/girlFront.png';
 
@@ -111,6 +113,13 @@ const BACK_GROUND = new Sprite({
   },
   image: IMAGE_MAP
 });
+const FOREGROUND_OBJECT = new Sprite({
+  position: {
+    x: OFFSET.x,
+    y: OFFSET.y,
+  },
+  image: IMAGE_FOREGROUND_OBJECT
+});
 const CHARACTER = new Sprite({
   position: {
     x: CANVAS.width/2 - CHARACTER_GIRL.width/4/2,
@@ -119,7 +128,7 @@ const CHARACTER = new Sprite({
   image: CHARACTER_GIRL,
   frames: {max: 4}
 });
-const LIST_MOVABLE = [BACK_GROUND, ...BOUNDARIES]
+const LIST_MOVABLE = [BACK_GROUND,FOREGROUND_OBJECT, ...BOUNDARIES]
 
 function rectCollision({rect1, rect2}) {
   return (
@@ -134,6 +143,7 @@ function animate() {
   window.requestAnimationFrame(animate);
   BACK_GROUND.draw();
   CHARACTER.draw();
+  FOREGROUND_OBJECT.draw();
   BOUNDARIES.forEach(boundary=>{
     boundary.draw();
   })
