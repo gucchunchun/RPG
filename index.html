@@ -5,10 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My RPG</title>
     <link rel="stylesheet" href="style.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      .canvas__ctr {
+        position: relative;
+        width: fit-content;
+        height: fit-content;
+      }
+      .canvas__overlap {
+        /* background-color: #000; */
+        border-radius: 50%;
+        height: 550px;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(0.5);
+        width: 550px;
+      }
+    </style>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
+    <div class="canvas__ctr">
+      <div class="canvas__overlap"></div>
+      <canvas id="canvas"></canvas>
+    </div>
     <script src="./data/collision.js"></script>
+    <script src="./data/path.js"></script>
     <script src="classes.js"></script>
     <script src="charactersSprites.js"></script>
     <script src="index.js"></script>

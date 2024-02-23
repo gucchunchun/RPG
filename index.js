@@ -1,4 +1,4 @@
-// CANVAS
+// Canvas
 const CANVAS = document.getElementById('canvas');
 const C = CANVAS.getContext('2d');
 CANVAS.width = 1024;
@@ -6,13 +6,7 @@ CANVAS.height = 576;
 C.fillStyle = '#FFFFFF';
 C.fillRect(0, 0, canvas.width, canvas.height);
 
-// COLLISION MAP (COLLISION: ./data/collision.js)
-const COLLISION_MAP = [];
-for(let i = 0; i < COLLISION.length; i += 70) {
-  COLLISION_MAP.push(COLLISION.slice(i, i + 70));
-}
-
-// SETTING
+// Setting
 const OFFSET = {
   x: -2330,
   y: -1300,
@@ -37,6 +31,25 @@ const KEYS =  {
   lastKey: undefined
 }
 
+// Utility Functions
+function rectCollision({rect1, rect2}) {
+  return (
+    rect2.position.x <= rect1.position.x + rect1.width && 
+    rect1.position.x <= rect2.position.x + rect2.width &&
+    rect2.position.y <= rect1.position.y + rect1.height &&
+    rect1.position.y <= rect2.position.y + rect2.height
+  )
+}
+function randomWithRatio(ratio = 0.5) {
+  const RETURN = Math.random() <= ratio;
+  return RETURN;
+}
+
+// Collision Map (COLLISION: ./data/collision.js)
+const COLLISION_MAP = [];
+for(let i = 0; i < COLLISION.length; i += 70) {
+  COLLISION_MAP.push(COLLISION.slice(i, i + 70));
+}
 const BOUNDARIES = [];
 COLLISION_MAP.forEach((row, rowIndex)=>{
   row.forEach((symbol, colIndex)=>{
@@ -51,12 +64,32 @@ COLLISION_MAP.forEach((row, rowIndex)=>{
   })
 })
 
-// Images
+// Path Map (PATH: ./data/path.js)
+const PATH_MAP = [];
+for(let i = 0; i < PATH.length; i += 70) {
+  PATH_MAP.push(PATH.slice(i, i + 70));
+}
+const PATH_ZONE = [];
+PATH_MAP.forEach((row, rowIndex)=>{
+  row.forEach((symbol, colIndex)=>{
+    if(symbol === 1025) {
+      PATH_ZONE.push(new Boundary({
+        position: {
+          x: colIndex * Boundary.width + OFFSET.x,
+          y: rowIndex * Boundary.height + OFFSET.y
+        }
+      }))
+    }
+  })
+})
+
+// BG & FG Image Load
 const IMAGE_MAP = new Image();
 IMAGE_MAP.src = './img/map/map.png';
 const IMAGE_FOREGROUND_OBJECT = new Image();
 IMAGE_FOREGROUND_OBJECT.src = './img/map/ForegroundObjects.png';
 
+// Sprites for animate()
 const BACK_GROUND = new Sprite({
   position: {
     x: OFFSET.x,
@@ -80,21 +113,15 @@ const PLAYER = new Character({
 });
 const LIST_MOVABLE = [BACK_GROUND,FOREGROUND_OBJECT, ...BOUNDARIES]
 
-function rectCollision({rect1, rect2}) {
-  return (
-    rect2.position.x <= rect1.position.x + rect1.width && 
-    rect1.position.x <= rect2.position.x + rect2.width &&
-    rect2.position.y <= rect1.position.y + rect1.height &&
-    rect1.position.y <= rect2.position.y + rect2.height
-  )
-}
-
 function animate() {
   window.requestAnimationFrame(animate);
   BACK_GROUND.draw();
   PLAYER.draw();
   FOREGROUND_OBJECT.draw();
   BOUNDARIES.forEach(boundary=>{
+    boundary.draw();
+  })
+  PATH_ZONE.forEach(boundary=>{
     boundary.draw();
   })
 
@@ -188,9 +215,15 @@ function animate() {
     }
   };
 }
-
 animate();
 
+// Sprites for animateBattle()
+
+function animateBattle() {
+  window.requestAnimationFrame(animateBattle);
+}
+
+// Event Listeners
 window.addEventListener('keydown', (e)=> {
   const TARGET_KEY = e.key;
   for(let key of Object.keys(KEYS)) {
