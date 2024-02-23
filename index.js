@@ -18,43 +18,25 @@ const OFFSET = {
   y: -1300,
 }
 const KEYS =  {
-  ArrowUp: {
+  up: {
     pressed: false,
     name: 'ArrowUp',
   },
-  ArrowDown: {
+  down: {
     pressed: false,
     name: 'ArrowDown',
   },
-  ArrowLeft: {
+  left: {
     pressed: false,
     name: 'ArrowLeft',
   },
-  ArrowRight: {
+  right: {
     pressed: false,
     name: 'ArrowRight',
   },
   lastKey: undefined
 }
 
-class Boundary {
-  static width = 48 // 12*12(TILE) * 400 (ZOOM)
-  static height = 48 // 12*12(TILE) * 400 (ZOOM)
-  constructor({position}) {
-    this.position = position;
-    this.width = 48;
-    this.height = 48;
-  }
-  draw() {
-    // C.fillStyle =  '#FF0000';
-    C.fillStyle =  'transparent';
-    C.fillRect(this.position.x, this.position.y, this.width, this.height);
-  }
-  update({position}) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-  }
-}
 const BOUNDARIES = [];
 COLLISION_MAP.forEach((row, rowIndex)=>{
   row.forEach((symbol, colIndex)=>{
@@ -74,44 +56,15 @@ const IMAGE_MAP = new Image();
 IMAGE_MAP.src = './img/map/map.png';
 const IMAGE_FOREGROUND_OBJECT = new Image();
 IMAGE_FOREGROUND_OBJECT.src = './img/map/ForegroundObjects.png';
-const CHARACTER_GIRL = new Image();
-CHARACTER_GIRL.src = './img/character/girlFront.png';
-
-class Sprite {
-  constructor({position, velocity, image, frames = {max: 1}}) {
-    this.position = position;
-    this.image = image;
-    this.frames = frames;
-    this.image.onload = () => {
-      this.width = this.image.width / this.frames.max;
-      this.height = this.image.height;
-    }
-  }
-  draw() {
-    C.drawImage(
-      this.image,
-      0,
-      0,
-      this.width,
-      this.height,
-      this.position.x,
-      this.position.y,
-      this.width,
-      this.height,
-    );
-  }
-  update({position}) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-  }
-}
 
 const BACK_GROUND = new Sprite({
   position: {
     x: OFFSET.x,
     y: OFFSET.y,
   },
-  image: IMAGE_MAP
+  image: IMAGE_MAP,
+  frames: {max: 2},
+  moving: true
 });
 const FOREGROUND_OBJECT = new Sprite({
   position: {
@@ -120,13 +73,10 @@ const FOREGROUND_OBJECT = new Sprite({
   },
   image: IMAGE_FOREGROUND_OBJECT
 });
-const CHARACTER = new Sprite({
-  position: {
-    x: CANVAS.width/2 - CHARACTER_GIRL.width/4/2,
-    y: CANVAS.height/2 - CHARACTER_GIRL.height/2,
-  },
-  image: CHARACTER_GIRL,
-  frames: {max: 4}
+const PLAYER = new Character({
+  image: SPRITE_MAIN_MALE.front,
+  canvas: CANVAS,
+  sprite: SPRITE_MAIN_MALE
 });
 const LIST_MOVABLE = [BACK_GROUND,FOREGROUND_OBJECT, ...BOUNDARIES]
 
@@ -142,17 +92,17 @@ function rectCollision({rect1, rect2}) {
 function animate() {
   window.requestAnimationFrame(animate);
   BACK_GROUND.draw();
-  CHARACTER.draw();
+  PLAYER.draw();
   FOREGROUND_OBJECT.draw();
   BOUNDARIES.forEach(boundary=>{
     boundary.draw();
   })
 
-  if(KEYS.ArrowDown.pressed && KEYS.lastKey == KEYS.ArrowDown.name) {
+  if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
     let canMove = true;
     for(let i = 0; i < BOUNDARIES.length; i++) {
       const BOUNDARY = BOUNDARIES[i];
-      if(rectCollision({rect1:CHARACTER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y - 3}}})) {
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y - 3}}})) {
         canMove = false;
         break;
       }else {
@@ -163,12 +113,18 @@ function animate() {
       LIST_MOVABLE.forEach((movable)=>{
         movable.update({position: {x:movable.position.x, y:movable.position.y - 3}});
       });
+      const PLAYER_STATE = PLAYER.state;
+      if(PLAYER_STATE.front === false) {
+        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+        PLAYER_STATE.front = true;
+      }
+      PLAYER.update({moving: true, state: PLAYER_STATE});
     }
-  }else if(KEYS.ArrowUp.pressed && KEYS.lastKey == KEYS.ArrowUp.name) {
+  }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
     let canMove = true;
     for(let i = 0; i < BOUNDARIES.length; i++) {
       const BOUNDARY = BOUNDARIES[i];
-      if(rectCollision({rect1:CHARACTER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y + 3}}})) {
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y + 3}}})) {
         canMove = false;
         break;
       }else {
@@ -179,12 +135,18 @@ function animate() {
       LIST_MOVABLE.forEach((movable)=>{
         movable.update({position: {x:movable.position.x, y:movable.position.y + 3}});
       });
+      const PLAYER_STATE = PLAYER.state;
+      if(PLAYER_STATE.back === false) {
+        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+        PLAYER_STATE.back = true;
+      }
+      PLAYER.update({moving: true, state: PLAYER_STATE});
     }
-  }else if(KEYS.ArrowLeft.pressed && KEYS.lastKey == KEYS.ArrowLeft.name) {
+  }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
     let canMove = true;
     for(let i = 0; i < BOUNDARIES.length; i++) {
       const BOUNDARY = BOUNDARIES[i];
-      if(rectCollision({rect1:CHARACTER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x + 3, y:BOUNDARY.position.y}}})) {
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x + 3, y:BOUNDARY.position.y}}})) {
         canMove = false;
         break;
       }else {
@@ -195,12 +157,18 @@ function animate() {
       LIST_MOVABLE.forEach((movable)=>{
         movable.update({position: {x:movable.position.x + 3, y:movable.position.y}});
       });
+      const PLAYER_STATE = PLAYER.state;
+      if(PLAYER_STATE.left === false) {
+        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+        PLAYER_STATE.left = true;
+      }
+      PLAYER.update({moving: true, state: PLAYER_STATE});
     }
-  }else if(KEYS.ArrowRight.pressed && KEYS.lastKey == KEYS.ArrowRight.name) {
+  }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
     let canMove = true;
     for(let i = 0; i < BOUNDARIES.length; i++) {
       const BOUNDARY = BOUNDARIES[i];
-      if(rectCollision({rect1:CHARACTER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x - 3, y:BOUNDARY.position.y}}})) {
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x - 3, y:BOUNDARY.position.y}}})) {
         canMove = false;
         break;
       }else {
@@ -211,6 +179,12 @@ function animate() {
       LIST_MOVABLE.forEach((movable)=>{
         movable.update({position: {x:movable.position.x - 3, y:movable.position.y}});
       });
+      const PLAYER_STATE = PLAYER.state;
+      if(PLAYER_STATE.right === false) {
+        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+        PLAYER_STATE.right = true;
+      }
+      PLAYER.update({moving: true, state: PLAYER_STATE});
     }
   };
 }
@@ -219,10 +193,19 @@ animate();
 
 window.addEventListener('keydown', (e)=> {
   const TARGET_KEY = e.key;
-  KEYS[TARGET_KEY].pressed = true;
-  KEYS.lastKey = TARGET_KEY;
+  for(let key of Object.keys(KEYS)) {
+    if(key != 'lastKey'&&KEYS[key].name === TARGET_KEY) {
+      KEYS[key].pressed = true;
+      KEYS.lastKey = TARGET_KEY;
+    }
+  }
 });
 window.addEventListener('keyup', (e)=> {
   const TARGET_KEY = e.key;
-  KEYS[TARGET_KEY].pressed = false;
+  for(let key of Object.keys(KEYS)) {
+    if(key != 'lastKey'&&KEYS[key].name === TARGET_KEY) {
+      KEYS[key].pressed = false;
+    }
+  }
+  PLAYER.moving = false;
 });
