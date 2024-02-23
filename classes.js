@@ -91,7 +91,6 @@ class Character extends Sprite {
     this.moving = moving;
     if(!this.moving){
       this.frames.val = 0;
-      console.log(this.frames)
     }
     this.state = state;
     this.image = this.sprite[Object.keys(this.state).find(state=>this.state[state])];

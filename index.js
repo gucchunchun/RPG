@@ -17,8 +17,8 @@ C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 const FPS = 60; // 1000/60 millisecond per frame
 const FRAME_INTERVAL = 1000 / 60;
 const OFFSET = {
-  x: -2330,
-  y: -1300,
+  x: -1880,
+  y: -350,
 }
 const KEYS =  {
   up: {
@@ -54,7 +54,7 @@ function randomWithRatio(ratio = 0.5) {
   return RETURN;
 }
 
-// Collision Map (COLLISION: ./data/collision.js)
+// Collision Map (COLLISION: ./data/boundaries.js)
 const COLLISION_MAP = [];
 for(let i = 0; i < COLLISION.length; i += 70) {
   COLLISION_MAP.push(COLLISION.slice(i, i + 70));
@@ -94,9 +94,9 @@ PATH_MAP.forEach((row, rowIndex)=>{
 
 // BG & FG Image Load
 const IMAGE_MAP = new Image();
-IMAGE_MAP.src = './img/map/map.png';
+IMAGE_MAP.src = './img/map/mapOK.png';
 const IMAGE_FOREGROUND_OBJECT = new Image();
-IMAGE_FOREGROUND_OBJECT.src = './img/map/ForegroundObjects.png';
+IMAGE_FOREGROUND_OBJECT.src = './img/map/map_foreground.png';
 const IMAGE_BG_BATTLE = new Image();
 IMAGE_BG_BATTLE.src = './img/battle/bg_battle.png';
 
