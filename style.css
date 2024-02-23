@@ -2,7 +2,97 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-size: inherit;
+}
+input[type="radio"] {
+  visibility: hidden;
+  height: 0;
+  width: 0;
 }
 body {
   background-color: #000;
+  font-size: 32px;
+}
+.canvas__ctr {
+  height: 576px;
+  position: relative;
+  width: 1024px;
+}
+.canvas__overlap {
+  /* background-color: #000; */
+  border-radius: 50%;
+  height: 550px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  width: 550px;
+}
+/* Player */
+.player__ctr {
+  background-color: white;
+  height: 100%;
+  right: 0;
+  position: absolute;
+  top: 0;
+  width: 20%;
+}
+.player__info__ctr {
+  height: 50%;
+  width: 100%;
+}
+.button__move {
+  height: 3rem;
+  width: 3rem;
+
+}
+.button__move span {
+  display: none;
+}
+
+/* Battle */
+.battle__ctr {
+  border: solid 5px #fff;
+  border-collapse: collapse;
+  bottom: 1rem;
+  display: none;
+  height: 30%;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: calc(100% - 2rem);
+  padding: 8px;
+}
+.battle__ctr.action {
+  display: flex;
+}
+.battle__action__ctr {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  width: 30%;
+}
+.battle__action__input {
+  background-color: #fff;
+  display: block;
+  height: 25%;
+  line-height: 2rem;
+  text-align: center;
+  width: 100%;
+}
+.battle__action__dialog {
+  padding: 1rem;
+}
+.battle__action__option__ctr {
+  background-color: #fff;
+  display: none;
+  height: 70%;
+  top: 50%;
+  left: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 70%;
+}
+.battle__action__option__ctr.active {
+  display: flex;
 }

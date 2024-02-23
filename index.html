@@ -5,33 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My RPG</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      .canvas__ctr {
-        position: relative;
-        width: fit-content;
-        height: fit-content;
-      }
-      .canvas__overlap {
-        /* background-color: #000; */
-        border-radius: 50%;
-        height: 550px;
-        left: 50%;
-        position: absolute;
-        top: 50%;
-        transform: translate(-50%, -50%) scale(0.5);
-        width: 550px;
-      }
-    </style>
   </head>
   <body>
     <div class="canvas__ctr">
-      <div class="canvas__overlap"></div>
       <canvas id="canvas"></canvas>
+      <div id="canvasOverlap" class="canvas__overlap"></div>
+      <div id="playerCtr" class="player__ctr">
+        <div id="playerInfoCtr" class="player__info__ctr"></div>
+        <div class="player_move__ctr">
+          <button id="up" class="button__move move--up">
+            <span>up</span>
+          </button>
+          <button id="left" class="button__move move--left">
+            <span>left</span>
+          </button>
+          <button id="right" class="button__move move--right">
+            <span>right</span>
+          </button>
+          <button id="down" class="button__move move--down">
+            <span>down</span>
+          </button>
+        </div>
+      </div>
+      <div id="battleCtr" class="battle__ctr">
+        <div class="battle__action__ctr">
+          <label for="fight" class="battle__action__input"
+            ><input id="fight" name="action" type="radio" />fight</label
+          >
+          <label for="signature" class="battle__action__input"
+            ><input id="signature" name="action" type="radio" />signature</label
+          >
+          <label for="item" class="battle__action__input"
+            ><input id="item" name="action" type="radio" />item</label
+          >
+          <label for="run" class="battle__action__input"
+            ><input id="run" name="action" type="radio" />run</label
+          >
+        </div>
+        <div id="battleDialog" class="battle__action__dialog">hahaha</div>
+      </div>
+      <div id="battleActionOption" class="battle__action__option__ctr"></div>
     </div>
     <script src="./data/collision.js"></script>
     <script src="./data/path.js"></script>

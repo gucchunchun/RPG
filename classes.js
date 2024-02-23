@@ -18,11 +18,13 @@ class Boundary {
 }
 
 class Sprite {
-  constructor({position, velocity = 50, image, frames = {max: 1}, moving = false}) {
+  constructor({canvas, canvasContent, position, movementDelay = 50, image, frames = {max: 1}, moving = false}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
     this.position = position;
-    this.velocity = velocity;
+    this.movementDelay = movementDelay;
     this.image = image;
-    this.frames = {...frames, val: 0, elapsed: 0};
+    this.frames = {...frames, val: 0, elapsed: 1};
     this.image.onload = () => {
       this.width = this.image.width / this.frames.max;
       this.height = this.image.height;
@@ -30,7 +32,7 @@ class Sprite {
     this.moving = moving;
   }
   draw() {
-    C.drawImage(
+    this.c.drawImage(
       this.image,
       this.frames.val * this.width,
       0,
@@ -41,20 +43,24 @@ class Sprite {
       this.width,
       this.height,
     );
+
     if(!this.moving){
-      this.frames.val = 0 
-      return;
+      this.frames.val = 0;
+      return
     }
     if(1 < this.frames.max) this.frames.elapsed++;
 
-    if(this.frames.elapsed % this.velocity != 0) return;
+    if(this.frames.elapsed % this.movementDelay != 0) return;
     if(this.frames.val < this.frames.max - 1) this.frames.val++;
     else this.frames.val = 0;
   }
   update({position=this.position, moving}) {
     this.position.x = position.x;
     this.position.y = position.y;
-    if(moving)this.moving = moving;
+    if(moving) this.moving = moving;
+    if(!this.moving){
+      this.frames.val = 0;
+    }
   }
 }
 
@@ -66,9 +72,8 @@ const CHARACTER_STATE = {
 }
 
 class Character extends Sprite {
-  constructor({position = {x: 0, y: 0}, velocity = 10, image, frames = {max: 4}, moving = false, canvas, sprite, state = CHARACTER_STATE}) {
-    super({position, velocity, image, frames, moving});
-    this.canvas = canvas;
+  constructor({canvas, canvasContent, position = {x: 0, y: 0}, movementDelay = 5, image, frames = {max: 4}, moving = false, sprite, state = CHARACTER_STATE}) {
+    super({canvas, canvasContent, position, movementDelay, image, frames, moving});
     this.sprite = sprite;
     this.state = CHARACTER_STATE;
     this.image.onload = () => {
@@ -80,10 +85,14 @@ class Character extends Sprite {
       this.height = this.image.height;
     } 
   }
-  update({position=this.position, moving, state=this.state}) {
+  update({position=this.position, moving=false, state=this.state}) {
     this.position.x = position.x;
     this.position.y = position.y;
-    if(moving)this.moving = moving;
+    this.moving = moving;
+    if(!this.moving){
+      this.frames.val = 0;
+      console.log(this.frames)
+    }
     this.state = state;
     this.image = this.sprite[Object.keys(this.state).find(state=>this.state[state])];
   }

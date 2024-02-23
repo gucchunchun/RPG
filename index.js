@@ -1,12 +1,21 @@
+const CANVAS_OVERLAP = document.getElementById('canvasOverlap');
+const PLAYER_CTR = document.getElementById('playerCtr');
+const PLAYER_INFO_CTR = document.getElementById('playerInfo');
+const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('button__move');
+const BATTLE_CTR = document.getElementById('battleCtr');
+const BATTLE_DIALOG = document.getElementById('battleDialog');
+
 // Canvas
 const CANVAS = document.getElementById('canvas');
 const C = CANVAS.getContext('2d');
 CANVAS.width = 1024;
 CANVAS.height = 576;
 C.fillStyle = '#FFFFFF';
-C.fillRect(0, 0, canvas.width, canvas.height);
+C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
 // Setting
+const FPS = 60; // 1000/60 millisecond per frame
+const FRAME_INTERVAL = 1000 / 60;
 const OFFSET = {
   x: -2330,
   y: -1300,
@@ -88,9 +97,13 @@ const IMAGE_MAP = new Image();
 IMAGE_MAP.src = './img/map/map.png';
 const IMAGE_FOREGROUND_OBJECT = new Image();
 IMAGE_FOREGROUND_OBJECT.src = './img/map/ForegroundObjects.png';
+const IMAGE_BG_BATTLE = new Image();
+IMAGE_BG_BATTLE.src = './img/battle/bg_battle.png';
 
 // Sprites for animate()
-const BACK_GROUND = new Sprite({
+const BG = new Sprite({
+  canvas: CANVAS,
+  canvasContent: C,
   position: {
     x: OFFSET.x,
     y: OFFSET.y,
@@ -100,6 +113,8 @@ const BACK_GROUND = new Sprite({
   moving: true
 });
 const FOREGROUND_OBJECT = new Sprite({
+  canvas: CANVAS,
+  canvasContent: C,
   position: {
     x: OFFSET.x,
     y: OFFSET.y,
@@ -107,24 +122,26 @@ const FOREGROUND_OBJECT = new Sprite({
   image: IMAGE_FOREGROUND_OBJECT
 });
 const PLAYER = new Character({
+  canvas: CANVAS,
+  canvasContent: C,
   image: SPRITE_MAIN_MALE.front,
   canvas: CANVAS,
   sprite: SPRITE_MAIN_MALE
 });
-const LIST_MOVABLE = [BACK_GROUND,FOREGROUND_OBJECT, ...BOUNDARIES]
+const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...BOUNDARIES]
 
+let previous = new Date().getTime();
 function animate() {
   window.requestAnimationFrame(animate);
-  BACK_GROUND.draw();
-  PLAYER.draw();
-  FOREGROUND_OBJECT.draw();
-  BOUNDARIES.forEach(boundary=>{
-    boundary.draw();
-  })
-  PATH_ZONE.forEach(boundary=>{
-    boundary.draw();
-  })
-
+  const CURRENT = new Date().getTime();
+  const ELAPSED = CURRENT - previous;
+  
+  if(!(FRAME_INTERVAL <= ELAPSED)){
+    return;
+  }
+  previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
+  
+  // Update
   if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
     let canMove = true;
     for(let i = 0; i < BOUNDARIES.length; i++) {
@@ -214,16 +231,38 @@ function animate() {
       PLAYER.update({moving: true, state: PLAYER_STATE});
     }
   };
+
+  // Render
+  BG.draw();
+  PLAYER.draw();
+  FOREGROUND_OBJECT.draw();
+  BOUNDARIES.forEach(boundary=>{
+    boundary.draw();
+  })
+  PATH_ZONE.forEach(boundary=>{
+    boundary.draw();
+  })
 }
 animate();
 
 // Sprites for animateBattle()
-
+const BG_BATTLE = new Sprite({
+  canvas: CANVAS,
+  canvasContent: C,
+  position: {
+    x: 0,
+    y: 0,
+  },
+  image: IMAGE_BG_BATTLE,
+  moving: false
+});
 function animateBattle() {
   window.requestAnimationFrame(animateBattle);
+  BG_BATTLE.draw();
 }
+// animateBattle();
 
-// Event Listeners
+// Player Move
 window.addEventListener('keydown', (e)=> {
   const TARGET_KEY = e.key;
   for(let key of Object.keys(KEYS)) {
@@ -235,10 +274,24 @@ window.addEventListener('keydown', (e)=> {
 });
 window.addEventListener('keyup', (e)=> {
   const TARGET_KEY = e.key;
+  PLAYER.update({moving: false});
   for(let key of Object.keys(KEYS)) {
     if(key != 'lastKey'&&KEYS[key].name === TARGET_KEY) {
       KEYS[key].pressed = false;
     }
   }
-  PLAYER.moving = false;
 });
+for(let button of LIST_PLAYER_MOVE_BTN) {
+  button.addEventListener('mousedown', (e)=> {
+    const START_EVENT = new KeyboardEvent('keydown', {
+      key: KEYS[e.target.id].name,
+    });
+    window.dispatchEvent(START_EVENT);
+  });
+  button.addEventListener('mouseup', (e)=> {
+    const END_EVENT = new KeyboardEvent('keyup', {
+      key: KEYS[e.target.id].name,
+    });
+    window.dispatchEvent(END_EVENT);
+  });
+}
