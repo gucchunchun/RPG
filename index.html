@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <h1>RPG</h1>
     <div class="canvas__ctr">
       <canvas id="canvas"></canvas>
       <div id="canvasOverlap" class="canvas__overlap"></div>
@@ -42,13 +43,15 @@
             ><input id="run" name="action" type="radio" />run</label
           >
         </div>
-        <div id="battleDialog" class="battle__action__dialog">hahaha</div>
+        <div id="battleDialog" class="battle__action__dialog">
+          dialog message
+        </div>
       </div>
       <div id="battleActionOption" class="battle__action__option__ctr"></div>
     </div>
-    <script src="./data/boundaries.js"></script>
-    <script src="classes.js"></script>
-    <script src="charactersSprites.js"></script>
-    <script src="index.js"></script>
+    <script src="./data/boundaries.js" defer></script>
+    <script src="classes.js" defer></script>
+    <script src="charactersSprites.js" defer></script>
+    <script src="index.js" defer></script>
   </body>
 </html>

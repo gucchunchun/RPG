@@ -76,6 +76,7 @@ class Character extends Sprite {
     super({canvas, canvasContent, position, movementDelay, image, frames, moving});
     this.sprite = sprite;
     this.state = CHARACTER_STATE;
+    this.walk = this.frames.elapsed % this.movementDelay;
     this.image.onload = () => {
       this.position = {
         x: this.canvas.width/2 - this.image.width/this.frames.max/2,

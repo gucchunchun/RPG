@@ -295,3 +295,11 @@ for(let button of LIST_PLAYER_MOVE_BTN) {
     window.dispatchEvent(END_EVENT);
   });
 }
+
+// Save data
+let isSaved = false;
+
+// Prevent Reload
+window.addEventListener('beforeunload', (e)=> {
+  e.preventDefault();
+});
