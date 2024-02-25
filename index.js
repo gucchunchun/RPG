@@ -53,44 +53,33 @@ function randomWithRatio(ratio = 0.5) {
   const RETURN = Math.random() <= ratio;
   return RETURN;
 }
-
-// Collision Map (COLLISION: ./data/boundaries.js)
-const COLLISION_MAP = [];
-for(let i = 0; i < COLLISION.length; i += 70) {
-  COLLISION_MAP.push(COLLISION.slice(i, i + 70));
-}
-const BOUNDARIES = [];
-COLLISION_MAP.forEach((row, rowIndex)=>{
-  row.forEach((symbol, colIndex)=>{
-    if(symbol === 1025) {
-      BOUNDARIES.push(new Boundary({
-        position: {
-          x: colIndex * Boundary.width + OFFSET.x,
-          y: rowIndex * Boundary.height + OFFSET.y
-        }
-      }))
-    }
+function makeMap(array) {
+  const ARRAY_MAP = [];
+  for(let i = 0; i < array.length; i += 70) {
+    ARRAY_MAP.push(array.slice(i, i + 70));
+  }
+  const MAP = [];
+  ARRAY_MAP.forEach((row, rowIndex)=>{
+    row.forEach((symbol, colIndex)=>{
+      if(symbol != 0) {
+        MAP.push(new Boundary({
+          position: {
+            x: colIndex * Boundary.width + OFFSET.x,
+            y: rowIndex * Boundary.height + OFFSET.y
+          }
+        }))
+      }
+    })
   })
-})
-
-// Path Map (PATH: ./data/path.js)
-const PATH_MAP = [];
-for(let i = 0; i < PATH.length; i += 70) {
-  PATH_MAP.push(PATH.slice(i, i + 70));
+  return MAP;
 }
-const PATH_ZONE = [];
-PATH_MAP.forEach((row, rowIndex)=>{
-  row.forEach((symbol, colIndex)=>{
-    if(symbol === 1025) {
-      PATH_ZONE.push(new Boundary({
-        position: {
-          x: colIndex * Boundary.width + OFFSET.x,
-          y: rowIndex * Boundary.height + OFFSET.y
-        }
-      }))
-    }
-  })
-})
+
+// Maps (COLLISION: ./data/boundaries.js)
+const COLLISION_MAP = makeMap(COLLISION);
+const PATH_MAP = makeMap(PATH);
+const ITEM_MAP = makeMap(ITEM);
+const WATER_MAP = makeMap(WATER);
+const NAP_MAP = makeMap(NAP);
 
 // BG & FG Image Load
 const IMAGE_MAP = new Image();
@@ -128,7 +117,7 @@ const PLAYER = new Character({
   canvas: CANVAS,
   sprite: SPRITE_MAIN_MALE
 });
-const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...BOUNDARIES]
+const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...ITEM_MAP, ...WATER_MAP, ...NAP_MAP]
 
 let previous = new Date().getTime();
 function animate() {
@@ -144,8 +133,8 @@ function animate() {
   // Update
   if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
     let canMove = true;
-    for(let i = 0; i < BOUNDARIES.length; i++) {
-      const BOUNDARY = BOUNDARIES[i];
+    for(let i = 0; i < COLLISION_MAP.length; i++) {
+      const BOUNDARY = COLLISION_MAP[i];
       if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y - 3}}})) {
         canMove = false;
         break;
@@ -166,8 +155,8 @@ function animate() {
     }
   }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
     let canMove = true;
-    for(let i = 0; i < BOUNDARIES.length; i++) {
-      const BOUNDARY = BOUNDARIES[i];
+    for(let i = 0; i < COLLISION_MAP.length; i++) {
+      const BOUNDARY = COLLISION_MAP[i];
       if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y + 3}}})) {
         canMove = false;
         break;
@@ -188,8 +177,8 @@ function animate() {
     }
   }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
     let canMove = true;
-    for(let i = 0; i < BOUNDARIES.length; i++) {
-      const BOUNDARY = BOUNDARIES[i];
+    for(let i = 0; i < COLLISION_MAP.length; i++) {
+      const BOUNDARY = COLLISION_MAP[i];
       if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x + 3, y:BOUNDARY.position.y}}})) {
         canMove = false;
         break;
@@ -210,8 +199,8 @@ function animate() {
     }
   }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
     let canMove = true;
-    for(let i = 0; i < BOUNDARIES.length; i++) {
-      const BOUNDARY = BOUNDARIES[i];
+    for(let i = 0; i < COLLISION_MAP.length; i++) {
+      const BOUNDARY = COLLISION_MAP[i];
       if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x - 3, y:BOUNDARY.position.y}}})) {
         canMove = false;
         break;
@@ -236,10 +225,19 @@ function animate() {
   BG.draw();
   PLAYER.draw();
   FOREGROUND_OBJECT.draw();
-  BOUNDARIES.forEach(boundary=>{
+  COLLISION_MAP.forEach(boundary=>{
     boundary.draw();
   })
-  PATH_ZONE.forEach(boundary=>{
+  PATH_MAP.forEach(boundary=>{
+    boundary.draw();
+  })
+  WATER_MAP.forEach(boundary=>{
+    boundary.draw();
+  })
+  NAP_MAP.forEach(boundary=>{
+    boundary.draw();
+  })
+  ITEM_MAP.forEach(boundary=>{
     boundary.draw();
   })
 }
@@ -306,6 +304,6 @@ let isSaved = false;
 // myName;
 
 // Prevent Reload
-window.addEventListener('beforeunload', (e)=> {
-  e.preventDefault();
-});
+// window.addEventListener('beforeunload', (e)=> {
+//   e.preventDefault();
+// });
