@@ -94,9 +94,9 @@ PATH_MAP.forEach((row, rowIndex)=>{
 
 // BG & FG Image Load
 const IMAGE_MAP = new Image();
-IMAGE_MAP.src = './img/map/mapOK.png';
+IMAGE_MAP.src = './img/map/map.png';
 const IMAGE_FOREGROUND_OBJECT = new Image();
-IMAGE_FOREGROUND_OBJECT.src = './img/map/map_foreground.png';
+IMAGE_FOREGROUND_OBJECT.src = './img/map/map--foreground.png';
 const IMAGE_BG_BATTLE = new Image();
 IMAGE_BG_BATTLE.src = './img/battle/bg_battle.png';
 
@@ -298,6 +298,12 @@ for(let button of LIST_PLAYER_MOVE_BTN) {
 
 // Save data
 let isSaved = false;
+// localStorage.setItem("name", "Chris");
+// let myName = localStorage.getItem("name");
+// myName;
+// localStorage.removeItem("name");
+// myName = localStorage.getItem("name");
+// myName;
 
 // Prevent Reload
 window.addEventListener('beforeunload', (e)=> {
