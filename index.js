@@ -142,11 +142,14 @@ function animate() {
   }
   previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
   
-  // Update
-  // 1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
-  let stepped = false;
+  //  Update
+
+  //  プレイヤー歩行
+  //  1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
   const MOVING = PLAYER.moving;
   let walked = PLAYER.walked;
+  let stepped = false;
+  //    一歩のアニメーションが終了していない場合
   if(MOVING && 0 < walked && walked < 24) {
     const STATE = Object.keys(PLAYER.state).find(key=>PLAYER.state[key]);
     let xChange = 0;
@@ -178,7 +181,6 @@ function animate() {
       }
     }
     if(!colliding) {
-      // プレイヤーの移動
       LIST_MOVABLE.forEach((movable)=>{
         const X = Math.round((movable.position.x + xChange) * 10)/10;
         const Y = Math.round((movable.position.y + yChange) * 10)/10;
@@ -193,10 +195,11 @@ function animate() {
         PLAYER.walked = walked;
       }
     }else {
-      // プレイヤーの停止
       PLAYER.update({moving: false})
     }
-  }else if(KEYS.pressed) {
+  }
+  //    歩行アニメーションの開始
+  else if(KEYS.pressed) {
     let colliding = false;
     if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
       for(let i = 0; i < COLLISION_MAP.length; i++) {
@@ -303,7 +306,9 @@ function animate() {
         PLAYER.update({moving: true, state: PLAYER_STATE});
       }
     };
-  }else {
+  }
+  //    キーボードが押されていない場合＝プレイヤー停止
+  else {
     PLAYER.update({moving: false});
   }
   let onPath = false;
@@ -337,24 +342,26 @@ function animate() {
     PLAYER.movementDelay = 5;
     PLAYER.velocity = 2.4;
   }
+
+
   if(stepped) {
       console.log("walk")
-      // let encountering = false;
-      // // player never encounter enemies on the path
-      // if(!onPath) {
-      //   let ratio = PLAYER.rateEncounter;
-      //   if(onForest) {
-      //     // Double ratio of encountering enemy on the forest
-      //     ratio * 2;
-      //   }
-      //   encountering = trueWithRatio(ratio);
-      // }
-      // if(encountering) {
-      //   // start battle
-      //   console.log("battle")
-      // }else {
+      let encountering = false;
+      // プレイヤーが道を歩いている場合：
+      if(!onPath) {
+        let ratio = PLAYER.rateEncounter;
+        if(onForest) {
+          // Double ratio of encountering enemy on the forest
+          ratio * 2;
+        }
+        encountering = trueWithRatio(ratio);
+      }
+      if(encountering) {
+        // start battle
+        console.log("battle")
+      }else {
         
-      // }
+      }
   }
   
 

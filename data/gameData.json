@@ -73,7 +73,7 @@
           "beat": 2,
           "step": 70
         },
-        "rateEncounter": 0.05,
+        "rateEncounter": 0.09,
         "rateRun": 0.5,
         "hp": 10
       }
