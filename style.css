@@ -55,17 +55,14 @@ body {
 .battle__ctr {
   border: solid 5px #fff;
   border-collapse: collapse;
-  bottom: 1rem;
-  display: none;
+  bottom: -30%;
+  display: flex;
   height: 30%;
   left: 50%;
   position: absolute;
   transform: translateX(-50%);
   width: calc(100% - 2rem);
   padding: 8px;
-}
-.battle__ctr.action {
-  display: flex;
 }
 .battle__action__ctr {
   display: flex;

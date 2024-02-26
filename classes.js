@@ -1,15 +1,17 @@
 class Boundary {
   static width = 48 // 12*12(TILE) * 400 (ZOOM)
   static height = 48 // 12*12(TILE) * 400 (ZOOM)
-  constructor({position}) {
+  constructor({canvas, canvasContent, position}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
     this.position = position;
     this.width = 48;
     this.height = 48;
   }
   draw() {
     // C.fillStyle =  '#FF0000';
-    C.fillStyle =  'transparent';
-    C.fillRect(this.position.x, this.position.y, this.width, this.height);
+    this.c.fillStyle =  'transparent';
+    this.c.fillRect(this.position.x, this.position.y, this.width, this.height);
   }
   update({position}) {
     this.position.x = position.x;
@@ -25,13 +27,24 @@ class Sprite {
     this.movementDelay = movementDelay;
     this.image = image;
     this.frames = {...frames, val: 0, elapsed: 1};
-    this.image.onload = () => {
-      this.width = this.image.width / this.frames.max;
-      this.height = this.image.height;
-    }
+    this.width = null;
+    this.height = null;
     this.moving = moving;
   }
   draw() {
+    if (this.image.complete) {
+      if(!this.width || !this.height) {
+        this.width = this.image.width / this.frames.max;
+        this.height = this.image.height;
+      }
+      this.drawImageAndAnimate(); 
+    } else {
+      this.image.onload = () => {
+        this.drawImageAndAnimate();
+      };
+    }
+  }
+  drawImageAndAnimate() {
     this.c.drawImage(
       this.image,
       this.frames.val * this.width,
@@ -103,12 +116,13 @@ class Character extends Sprite {
 class Player extends Character {
   constructor({canvas, canvasContent, position = {x: 0, y: 0},
                movementDelay = 5, image, frames = {max: 4}, moving = false, 
-               sprite, velocity = 2.4, rateEncounter = 0.5}) {
+               sprite, velocity = 2.4, data = {rateEncounter: 0.5}}) {
     super({canvas, canvasContent, position, movementDelay, image, frames, moving, sprite});
     this.velocity = velocity;
-    this.rateEncounter = rateEncounter;
+    this.rateEncounter = data.rateEncounter;
     this.step = 0;
     this.moved = 0;
+    this.data = data;
   }
   update({position=this.position, moving=false, state=this.state, step=this.steps}) {
     super.update({position, moving, state});
@@ -124,3 +138,5 @@ class Player extends Character {
   }
 
 }
+
+export { Boundary, Sprite, Character, Player };
