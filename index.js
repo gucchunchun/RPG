@@ -2,6 +2,7 @@ import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom } from './utils.js';
 import { Boundary, Sprite, Character, Player } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
+import { CHARACTER_STATE } from "./types.js";
 
 // グローバル設定
 const FPS = 60; // 1フレームあたり 1000/60 millisecond
@@ -45,14 +46,13 @@ fetchJsonData('./data/gameData.json')
   CANVAS.height = 576;
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
-  // Maps (COLLISION: ./data/boundaries.js)
+  // 衝突検出用マップ
   const COLLISION_MAP = makeMap(COLLISION, CANVAS, C, OFFSET);
   const PATH_MAP = makeMap(PATH, CANVAS, C, OFFSET);
   const FOREST_MAP = makeMap(FOREST, CANVAS, C, OFFSET);
   const ITEM_MAP = makeMap(ITEM, CANVAS, C, OFFSET);
   const WATER_MAP = makeMap(WATER, CANVAS, C, OFFSET);
   const NAP_MAP = makeMap(NAP, CANVAS, C, OFFSET);
-
 
   // 固定背景:
   const IMG_MAP = new Image();
@@ -65,7 +65,7 @@ fetchJsonData('./data/gameData.json')
     },
     image: IMG_MAP,
     frames: {max: 2},
-    moving: true
+    moving: true,
   });
   IMG_MAP.src = './img/map/map.png';
   const IMG_FG_OBJ = new Image();
@@ -92,7 +92,7 @@ fetchJsonData('./data/gameData.json')
   });
   IMG_BG_BATTLE.src = './img/battle/bg_battle.png';
   
-  
+  // プレイヤー決定＊
   const PLAYER_DATA = DATA.player.male;
   const PLAYER_SPRITES = {};
   for(let key of Object.keys(PLAYER_DATA.image)) {
@@ -100,52 +100,49 @@ fetchJsonData('./data/gameData.json')
     IMAGE.src = PATH_TO_CHAR_IMG + PLAYER_DATA.image[key];
     PLAYER_SPRITES[key] = IMAGE;
   }
-  // console.log(PLAYER.data)
   const PLAYER = new Player({
     canvas: CANVAS,
     canvasContent: C,
     image: PLAYER_SPRITES.down,
-    canvas: CANVAS,
     sprite: PLAYER_SPRITES,
     data: PLAYER_DATA
   });
+
+  // プレイヤーの動きに合わせて移動させるもののリスト
   const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...ITEM_MAP, ...WATER_MAP, ...NAP_MAP, ...FOREST_MAP]
 
-  // Game Loop
+  // 基本ゲームループ
   let previous = new Date().getTime();
-  let walk = 0;
   function animate() {
     const ANIMATION_ID = window.requestAnimationFrame(animate);
     const CURRENT = new Date().getTime();
     const ELAPSED = CURRENT - previous;
-
+    // ゲームループのスピード調整
     if(!(FRAME_INTERVAL <= ELAPSED)){
       return;
     }
     previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
 
-    // Update
-    //  プレイヤー歩行
-    //  1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
-    const MOVING = PLAYER.moving;
+    // アップデート
+    //  プレイヤー歩行：1歩 ＝ 24px/一歩分足が動くアニメーション
     let moved = PLAYER.moved;
     let stepped = false;
-    //    一歩のアニメーションが終了していない場合
-    if(MOVING && 0 < moved && moved < 24) {
-      const STATE = Object.keys(PLAYER.state).find(key=>PLAYER.state[key]);
+    //  一歩のアニメーションが終了していない場合
+    if(PLAYER.moving && 0 < moved && moved < 24) {
+      const STATE = PLAYER.state;
       let xChange = 0;
       let yChange = 0;
       switch (STATE) {
-        case 'down':
+        case CHARACTER_STATE.down:
           yChange = -PLAYER.velocity;
           break;
-        case 'up':
+        case CHARACTER_STATE.up:
           yChange = PLAYER.velocity;
           break;
-        case 'left':
+        case CHARACTER_STATE.left:
           xChange = PLAYER.velocity;
           break;
-        case 'right':
+        case CHARACTER_STATE.right:
           xChange = -PLAYER.velocity;
           break;
       }
@@ -170,7 +167,7 @@ fetchJsonData('./data/gameData.json')
         moved = Math.round((moved + PLAYER.velocity)*10)/10;
         if(24 <= moved) {
           stepped = true;
-          PLAYER.update({step: PLAYER.step++});
+          PLAYER.update({step: PLAYER.data.step++});
         }else {
           PLAYER.moved = moved;
         }
@@ -178,7 +175,7 @@ fetchJsonData('./data/gameData.json')
         PLAYER.update({moving: false})
       }
     }
-    //    歩行アニメーションの開始
+    //  歩行アニメーションの開始
     else if(KEYS.pressed) {
       let colliding = false;
       if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
@@ -199,40 +196,38 @@ fetchJsonData('./data/gameData.json')
             const Y = Math.round((movable.position.y - PLAYER.velocity) * 10)/10;
             movable.update({position: {x: X, y: Y}});
           });
-          const PLAYER_STATE = PLAYER.state;
-          if(PLAYER_STATE.down === false) {
-            PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-            PLAYER_STATE.down = true;
+          if(PLAYER.state === CHARACTER_STATE.down) {
+            PLAYER.update({moving: true});
+          }else {
+            PLAYER.update({moving: true, state: CHARACTER_STATE.down});
           }
-          PLAYER.update({moving: true, state: PLAYER_STATE});
           PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
         }
       }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
-      for(let i = 0; i < COLLISION_MAP.length; i++) {
-        const BOUNDARY = COLLISION_MAP[i];
-        const X = BOUNDARY.position.x;
-        const Y = Math.round((BOUNDARY.position.y + PLAYER.velocity) * 10)/10;
-        if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
-          colliding = true;
-          break;
-        }else {
-          continue;
+        for(let i = 0; i < COLLISION_MAP.length; i++) {
+          const BOUNDARY = COLLISION_MAP[i];
+          const X = BOUNDARY.position.x;
+          const Y = Math.round((BOUNDARY.position.y + PLAYER.velocity) * 10)/10;
+          if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+            colliding = true;
+            break;
+          }else {
+            continue;
+          }
         }
-      }
-      if(!colliding) {
-        LIST_MOVABLE.forEach((movable)=>{
-          const X = movable.position.x;
-          const Y = Math.round((movable.position.y + PLAYER.velocity) * 10)/10;
-          movable.update({position: {x: X, y: Y}});
-        });
-        const PLAYER_STATE = PLAYER.state;
-        if(PLAYER_STATE.up === false) {
-          PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-          PLAYER_STATE.up = true;
+        if(!colliding) {
+          LIST_MOVABLE.forEach((movable)=>{
+            const X = movable.position.x;
+            const Y = Math.round((movable.position.y + PLAYER.velocity) * 10)/10;
+            movable.update({position: {x: X, y: Y}});
+          });
+          if(PLAYER.state === CHARACTER_STATE.up) {
+            PLAYER.update({moving: true});
+          }else {
+            PLAYER.update({moving: true, state: CHARACTER_STATE.up});
+          }
+          PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
         }
-        PLAYER.update({moving: true, state: PLAYER_STATE});
-        PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
-      }
       }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
         for(let i = 0; i < COLLISION_MAP.length; i++) {
           const BOUNDARY = COLLISION_MAP[i];
@@ -251,12 +246,11 @@ fetchJsonData('./data/gameData.json')
             const Y = movable.position.y;
             movable.update({position: {x: X, y: Y}});
           });
-          const PLAYER_STATE = PLAYER.state;
-          if(PLAYER_STATE.left === false) {
-            PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-            PLAYER_STATE.left = true;
+          if(PLAYER.state === CHARACTER_STATE.left) {
+            PLAYER.update({moving: true});
+          }else {
+            PLAYER.update({moving: true, state: CHARACTER_STATE.left});
           }
-          PLAYER.update({moving: true, state: PLAYER_STATE});
           PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
         }
       }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
@@ -277,17 +271,16 @@ fetchJsonData('./data/gameData.json')
             const Y = movable.position.y;
             movable.update({position: {x: X, y: Y}});
           });
-          const PLAYER_STATE = PLAYER.state;
-          if(PLAYER_STATE.right === false) {
-            PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-            PLAYER_STATE.right = true;
+          if(PLAYER.state === CHARACTER_STATE.right) {
+            PLAYER.update({moving: true});
+          }else {
+            PLAYER.update({moving: true, state: CHARACTER_STATE.right});
           }
-          PLAYER.update({moving: true, state: PLAYER_STATE});
           PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
         }
       };
     }
-    //    キーボードが押されていない場合＝プレイヤー停止
+    //  キーボード/ボタンが押されていない場合＝プレイヤー停止
     else {
       PLAYER.update({moving: false});
     }
@@ -324,15 +317,16 @@ fetchJsonData('./data/gameData.json')
       PLAYER.velocity = 2.4;
     }
 
-
+    // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
     if(stepped) {
         console.log("walk")
         let encountering = false;
-        // プレイヤーが道を歩いている場合：
+        // プレイヤーが道を歩いている場合: 0％
         if(!onPath) {
+          // プレイヤーが草原を歩いている場合: 固有の出合い率
           let ratio = PLAYER.data.rateEncounter;
+          // プレイヤーが森を歩いている場合: 固有の出合い率*2
           if(onForest) {
-            // Double ratio of encountering enemy on the forest
             ratio * 2;
           }
           encountering = trueWithRatio(ratio);

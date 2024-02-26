@@ -1,3 +1,5 @@
+import { CHARACTER_STATE } from "./types.js";
+
 class Boundary {
   static width = 48 // 12*12(TILE) * 400 (ZOOM)
   static height = 48 // 12*12(TILE) * 400 (ZOOM)
@@ -19,32 +21,34 @@ class Boundary {
   }
 }
 
+// movementDelay: ゲームの何フレームごとにSprite自身の次のフレームに切り替わるか。(1000/FPS*movementDelay)秒/frame
 class Sprite {
-  constructor({canvas, canvasContent, position, movementDelay = 50, image, frames = {max: 1}, moving = false}) {
+  constructor({canvas, canvasContent, position, image, movementDelay = 60, frames = {max: 1}, moving = false}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.position = position;
-    this.movementDelay = movementDelay;
     this.image = image;
+    this.movementDelay = movementDelay;
     this.frames = {...frames, val: 0, elapsed: 1};
-    this.width = null;
-    this.height = null;
     this.moving = moving;
+    this.image.onload = () => {
+      this.width = this.image.width / this.frames.max;
+      this.height = this.image.height;
+    };
   }
   draw() {
-    if (this.image.complete) {
-      if(!this.width || !this.height) {
+    if(!this.width || !this.height) {
+      if(this.image.complete) {
         this.width = this.image.width / this.frames.max;
         this.height = this.image.height;
+      }else {
+        this.image.onload = () => {
+          this.width = this.image.width / this.frames.max;
+          this.height = this.image.height;
+          this.draw();
+        };
       }
-      this.drawImageAndAnimate(); 
-    } else {
-      this.image.onload = () => {
-        this.drawImageAndAnimate();
-      };
     }
-  }
-  drawImageAndAnimate() {
     this.c.drawImage(
       this.image,
       this.frames.val * this.width,
@@ -58,83 +62,87 @@ class Sprite {
     );
 
     if(!this.moving){
-      this.frames.val = 0;
       return
     }
+
     if(1 < this.frames.max) this.frames.elapsed++;
-
     if(this.frames.elapsed % this.movementDelay !== 0) return;
-    if(this.frames.val < this.frames.max - 1) this.frames.val++;
-    else this.frames.val = 0;
+    if(this.frames.val < this.frames.max - 1) {
+      this.frames.val++
+    }else {
+      this.frames.val = 0
+    };
   }
-  update({position=this.position, moving}) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-    if(moving) this.moving = moving;
-    if(!this.moving){
-      this.frames.val = 0;
+  update({position, moving=this.moving}) {
+    if(position) {
+      this.position.x = position.x;
+      this.position.y = position.y;
     }
-  }
-}
-
-const CHARACTER_STATE = {
-  down: true,
-  up: false,
-  left: false,
-  right: false,
-}
-
-class Character extends Sprite {
-  constructor({canvas, canvasContent, position = {x: 0, y: 0}, movementDelay = 2, image, frames = {max: 4}, moving = false, sprite}) {
-    super({canvas, canvasContent, position, movementDelay, image, frames, moving});
-    this.sprite = sprite;
-    this.state = CHARACTER_STATE;
-    this.image.onload = () => {
-      this.position = {
-        x: this.canvas.width/2 - this.image.width/this.frames.max/2,
-        y: this.canvas.height/2 - this.image.height/2,
-      },
-      this.width = this.image.width / this.frames.max;
-      this.height = this.image.height;
-    } 
-  }
-  update({position=this.position, moving=false, state=this.state}) {
-    this.position.x = position.x;
-    this.position.y = position.y;
     this.moving = moving;
     if(!this.moving){
       this.frames.val = 0;
     }
-    this.state = state;
-    this.image = this.sprite[Object.keys(this.state).find(state=>this.state[state])];
-    if(state) {
-      this.frames.val = 0;
-    }
   }
 }
 
-class Player extends Character {
-  constructor({canvas, canvasContent, position = {x: 0, y: 0},
-               movementDelay = 5, image, frames = {max: 4}, moving = false, 
-               sprite, velocity = 2.4, data = {rateEncounter: 0.5}}) {
-    super({canvas, canvasContent, position, movementDelay, image, frames, moving, sprite});
-    this.velocity = velocity;
-    this.rateEncounter = data.rateEncounter;
-    this.step = 0;
-    this.moved = 0;
+class Character extends Sprite {
+  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, data}) {
+    super({canvas, canvasContent, position, image, movementDelay, frames, moving});
     this.data = data;
   }
-  update({position=this.position, moving=false, state=this.state, step=this.steps}) {
-    super.update({position, moving, state});
+}
+
+// velocity: px / ゲーム1frame( 1000/FPS )
+class Player extends Character {
+  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, 
+                moving = false, data, sprite, velocity = 2.4}) 
+  {
+    super({canvas, canvasContent, position, image, movementDelay, frames, moving, data});
+    this.state = CHARACTER_STATE.down;
+    this.sprite = sprite;
+    this.velocity = velocity;
+    this.moved = 0;
+    this.image.onload = () => {
+      this.positionCenter();
+      this.width = this.image.width / this.frames.max;
+      this.height = this.image.height;
+    } 
+  }
+  positionCenter(){
+    // プレイヤーを画面のセンターに配置
+    this.position = {
+      x: this.canvas.width/2 - this.image.width/this.frames.max/2,
+      y: this.canvas.height/2 - this.image.height/2,
+    }
+  }
+  _updateImage(newState) {
+    switch(newState) {
+      case CHARACTER_STATE.down:
+        this.image = this.sprite.down;
+        break;
+      case CHARACTER_STATE.up:
+        this.image = this.sprite.up;
+        break;
+      case CHARACTER_STATE.left:
+        this.image = this.sprite.left;
+        break;
+      case CHARACTER_STATE.right:
+        this.image = this.sprite.right;
+        break;
+    }
+  }
+  update({position, moving, state, step}) {
+    super.update({position, moving});
     if(state) {
+      this.state = state;
+      this._updateImage(state);
       this.frames.val = 0;
       this.moved = 0;
     }
     if(step) {
-      this.steps = step;
+      this.data.step = step;
       this.moved = 0;
     }
-    
   }
 
 }
