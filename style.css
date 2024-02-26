@@ -19,14 +19,14 @@ body {
   width: 1024px;
 }
 .canvas__overlap {
-  /* background-color: #000; */
+  aspect-ratio: 1;
+  background-color: #000;
   border-radius: 50%;
-  height: 550px;
   left: 50%;
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -50%) scale(0.5);
-  width: 550px;
+  transform: translate(-50%, -50%) scale(0);
+  width: 50%;
 }
 /* Player */
 .player__ctr {

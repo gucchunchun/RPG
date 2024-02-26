@@ -1,4 +1,3 @@
-const CANVAS_OVERLAP = document.getElementById('canvasOverlap');
 const PLAYER_CTR = document.getElementById('playerCtr');
 const PLAYER_INFO_CTR = document.getElementById('playerInfo');
 const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('button__move');
@@ -147,10 +146,10 @@ function animate() {
   //  プレイヤー歩行
   //  1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
   const MOVING = PLAYER.moving;
-  let walked = PLAYER.walked;
+  let moved = PLAYER.moved;
   let stepped = false;
   //    一歩のアニメーションが終了していない場合
-  if(MOVING && 0 < walked && walked < 24) {
+  if(MOVING && 0 < moved && moved < 24) {
     const STATE = Object.keys(PLAYER.state).find(key=>PLAYER.state[key]);
     let xChange = 0;
     let yChange = 0;
@@ -186,13 +185,12 @@ function animate() {
         const Y = Math.round((movable.position.y + yChange) * 10)/10;
         movable.update({position: {x: X, y: Y}});
       });
-      walked = Math.round((walked + PLAYER.velocity)*10)/10;
-      if(24 <= walked) {
+      moved = Math.round((moved + PLAYER.velocity)*10)/10;
+      if(24 <= moved) {
         stepped = true;
-        PLAYER.step = PLAYER.step++;
-        PLAYER.walked = 0;
+        PLAYER.update({step: PLAYER.step++});
       }else {
-        PLAYER.walked = walked;
+        PLAYER.moved = moved;
       }
     }else {
       PLAYER.update({moving: false})
@@ -224,8 +222,8 @@ function animate() {
           PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
           PLAYER_STATE.down = true;
         }
-        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
         PLAYER.update({moving: true, state: PLAYER_STATE});
+        PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
       }
     }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
     for(let i = 0; i < COLLISION_MAP.length; i++) {
@@ -250,8 +248,8 @@ function animate() {
         PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
         PLAYER_STATE.up = true;
       }
-      PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
       PLAYER.update({moving: true, state: PLAYER_STATE});
+      PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
     }
     }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
       for(let i = 0; i < COLLISION_MAP.length; i++) {
@@ -276,8 +274,8 @@ function animate() {
           PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
           PLAYER_STATE.left = true;
         }
-        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
         PLAYER.update({moving: true, state: PLAYER_STATE});
+        PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
       }
     }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
       for(let i = 0; i < COLLISION_MAP.length; i++) {
@@ -302,8 +300,8 @@ function animate() {
           PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
           PLAYER_STATE.right = true;
         }
-        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
         PLAYER.update({moving: true, state: PLAYER_STATE});
+        PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
       }
     };
   }
@@ -311,6 +309,7 @@ function animate() {
   else {
     PLAYER.update({moving: false});
   }
+
   let onPath = false;
   let onForest = false;
   //  プレイヤーが道を歩いている場合：1歩 ＝ 4px * 6frames 早歩き
@@ -355,10 +354,12 @@ function animate() {
           ratio * 2;
         }
         encountering = trueWithRatio(ratio);
+        PLAYER.update({moving: false});
       }
       if(encountering) {
         // start battle
         console.log("battle")
+        handleBattleStart();
       }else {
         
       }
@@ -409,7 +410,7 @@ function animateBattle() {
 }
 // Transition to battle state
 function handleBattleStart() {
-
+  // gsap.fromTo('#canvasOverlap', {scale:0, opacity: 0.5}, {scale:8, opacity: 1, duration: 2, ease: "expoScale(0, 8, power1.inOut)"});
 }
 
 // Player Move

@@ -108,12 +108,17 @@ class Player extends Character {
     this.velocity = velocity;
     this.rateEncounter = rateEncounter;
     this.step = 0;
-    this.walked = 0;
+    this.moved = 0;
   }
-  update({position=this.position, moving=false, state=this.state}) {
+  update({position=this.position, moving=false, state=this.state, step=this.steps}) {
     super.update({position, moving, state});
     if(state) {
       this.frames.val = 0;
+      this.moved = 0;
+    }
+    if(step) {
+      this.steps = step;
+      this.moved = 0;
     }
     
   }
