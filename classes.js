@@ -103,7 +103,7 @@ class Character extends Sprite {
 class Player extends Character {
   constructor({canvas, canvasContent, position = {x: 0, y: 0},
                movementDelay = 5, image, frames = {max: 4}, moving = false, 
-               sprite, velocity = 2.4, rateEncounter = 0.1}) {
+               sprite, velocity = 2.4, rateEncounter = 0.5}) {
     super({canvas, canvasContent, position, movementDelay, image, frames, moving, sprite});
     this.velocity = velocity;
     this.rateEncounter = rateEncounter;

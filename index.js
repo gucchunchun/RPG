@@ -98,7 +98,7 @@ IMAGE_FOREGROUND_OBJECT.src = './img/map/map--foreground.png';
 const IMAGE_BG_BATTLE = new Image();
 IMAGE_BG_BATTLE.src = './img/battle/bg_battle.png';
 
-// Sprites for animate()
+// 戦闘アニメーション用Sprites
 const BG = new Sprite({
   canvas: CANVAS,
   canvasContent: C,
@@ -132,7 +132,7 @@ const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...I
 let previous = new Date().getTime();
 let walk = 0;
 function animate() {
-  window.requestAnimationFrame(animate);
+  const ANIMATION_ID = window.requestAnimationFrame(animate);
   const CURRENT = new Date().getTime();
   const ELAPSED = CURRENT - previous;
   
@@ -141,8 +141,7 @@ function animate() {
   }
   previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
   
-  //  Update
-
+  // Update
   //  プレイヤー歩行
   //  1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
   const MOVING = PLAYER.moving;
@@ -354,14 +353,14 @@ function animate() {
           ratio * 2;
         }
         encountering = trueWithRatio(ratio);
-        PLAYER.update({moving: false});
       }
       if(encountering) {
-        // start battle
         console.log("battle")
+        PLAYER.update({moving: false});
+        // 通常アニメーション停止
+        window.cancelAnimationFrame(ANIMATION_ID);
+        // 戦闘アニメーションへの変遷、開始
         handleBattleStart();
-      }else {
-        
       }
   }
   
@@ -391,7 +390,7 @@ function animate() {
 }
 animate();
 
-// Sprites for animateBattle()
+// 戦闘アニメーション用Sprites
 const BG_BATTLE = new Sprite({
   canvas: CANVAS,
   canvasContent: C,
@@ -403,14 +402,33 @@ const BG_BATTLE = new Sprite({
   moving: false
 });
 
-// animateBattle();
+// 戦闘アニメーション
 function animateBattle() {
   window.requestAnimationFrame(animateBattle);
   BG_BATTLE.draw();
 }
 // Transition to battle state
 function handleBattleStart() {
-  // gsap.fromTo('#canvasOverlap', {scale:0, opacity: 0.5}, {scale:8, opacity: 1, duration: 2, ease: "expoScale(0, 8, power1.inOut)"});
+  gsap.to('#playerCtr', {
+    left: "100%",
+    opacity: 0, 
+  });
+  gsap.fromTo('#canvasOverlap', 
+    {scale:0, opacity: 0.5}, 
+    {
+      scale:8, 
+      opacity: 1, 
+      duration: 2, 
+      ease: "expoScale(0, 8, power1.inOut)",
+      onComplete() {
+        gsap.to('#canvasOverlap', {
+          opacity: 0,
+          duration: 1, 
+        })
+        // 戦闘シーンアニメーション開始
+        animateBattle();
+      }
+  });
 }
 
 // Player Move
