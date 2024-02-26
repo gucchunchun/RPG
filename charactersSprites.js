@@ -8,8 +8,8 @@ SPRITE_MAIN_MALE_RIGHT.src = './img/character/mainMRight.png';
 const SPRITE_MAIN_MALE_LEFT = new Image();
 SPRITE_MAIN_MALE_LEFT.src = './img/character/mainMLeft.png';
 const SPRITE_MAIN_MALE = {
-  front: SPRITE_MAIN_MALE_FRONT,
-  back: SPRITE_MAIN_MALE_BACK,
+  down: SPRITE_MAIN_MALE_FRONT,
+  up: SPRITE_MAIN_MALE_BACK,
   right: SPRITE_MAIN_MALE_RIGHT,
   left: SPRITE_MAIN_MALE_LEFT,
 }
@@ -24,8 +24,8 @@ SPRITE_MAIN_FEMALE_RIGHT.src = './img/character/mainFRight.png';
 const SPRITE_MAIN_FEMALE_LEFT = new Image();
 SPRITE_MAIN_FEMALE_LEFT.src = './img/character/mainFLeft.png';
 const SPRITE_MAIN_FEMALE = {
-  front: SPRITE_MAIN_FEMALE_FRONT,
-  back: SPRITE_MAIN_FEMALE_BACK,
+  down: SPRITE_MAIN_FEMALE_FRONT,
+  up: SPRITE_MAIN_FEMALE_BACK,
   right: SPRITE_MAIN_FEMALE_RIGHT,
   left: SPRITE_MAIN_FEMALE_LEFT,
 }

@@ -14,7 +14,7 @@ C.fillStyle = '#FFFFFF';
 C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
 // Setting
-const FPS = 60; // 1000/60 millisecond per frame
+const FPS = 30; // 1フレームあたり 1000/60 millisecond
 const FRAME_INTERVAL = 1000 / 60;
 const OFFSET = {
   x: -1880,
@@ -37,6 +37,7 @@ const KEYS =  {
     pressed: false,
     name: 'ArrowRight',
   },
+  pressed: false,
   lastKey: undefined
 }
 
@@ -73,10 +74,19 @@ function makeMap(array) {
   })
   return MAP;
 }
+function trueWithRatio(ratio) {
+  const RANDOM_NUM = Math.random();
+  if (RANDOM_NUM < ratio) {
+      return true; 
+  } else {
+      return false; 
+  }
+}
 
 // Maps (COLLISION: ./data/boundaries.js)
 const COLLISION_MAP = makeMap(COLLISION);
 const PATH_MAP = makeMap(PATH);
+const FOREST_MAP = makeMap(FOREST);
 const ITEM_MAP = makeMap(ITEM);
 const WATER_MAP = makeMap(WATER);
 const NAP_MAP = makeMap(NAP);
@@ -110,16 +120,18 @@ const FOREGROUND_OBJECT = new Sprite({
   },
   image: IMAGE_FOREGROUND_OBJECT
 });
-const PLAYER = new Character({
+const PLAYER = new Player({
   canvas: CANVAS,
   canvasContent: C,
-  image: SPRITE_MAIN_MALE.front,
+  image: SPRITE_MAIN_MALE.down,
   canvas: CANVAS,
   sprite: SPRITE_MAIN_MALE
 });
-const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...ITEM_MAP, ...WATER_MAP, ...NAP_MAP]
+const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...ITEM_MAP, ...WATER_MAP, ...NAP_MAP, ...FOREST_MAP]
 
+// Game Loop
 let previous = new Date().getTime();
+let walk = 0;
 function animate() {
   window.requestAnimationFrame(animate);
   const CURRENT = new Date().getTime();
@@ -131,95 +143,220 @@ function animate() {
   previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
   
   // Update
-  if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
-    let canMove = true;
+  // 1歩 ＝ 24px, 足が一歩動くアニメーション(Player.frame.valの２つ分)
+  let stepped = false;
+  const MOVING = PLAYER.moving;
+  let walked = PLAYER.walked;
+  if(MOVING && 0 < walked && walked < 24) {
+    const STATE = Object.keys(PLAYER.state).find(key=>PLAYER.state[key]);
+    let xChange = 0;
+    let yChange = 0;
+    switch (STATE) {
+      case 'down':
+        yChange = -PLAYER.velocity;
+        break;
+      case 'up':
+        yChange = PLAYER.velocity;
+        break;
+      case 'left':
+        xChange = PLAYER.velocity;
+        break;
+      case 'right':
+        xChange = -PLAYER.velocity;
+        break;
+    }
+    let colliding = false;
     for(let i = 0; i < COLLISION_MAP.length; i++) {
       const BOUNDARY = COLLISION_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y - 3}}})) {
-        canMove = false;
+      const X = Math.round((BOUNDARY.position.x + xChange) * 10)/10;
+      const Y = Math.round((BOUNDARY.position.y + yChange) * 10)/10;
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+        colliding = true;
         break;
       }else {
         continue;
       }
     }
-    if(canMove) {
+    if(!colliding) {
+      // プレイヤーの移動
       LIST_MOVABLE.forEach((movable)=>{
-        movable.update({position: {x:movable.position.x, y:movable.position.y - 3}});
+        const X = Math.round((movable.position.x + xChange) * 10)/10;
+        const Y = Math.round((movable.position.y + yChange) * 10)/10;
+        movable.update({position: {x: X, y: Y}});
       });
-      const PLAYER_STATE = PLAYER.state;
-      if(PLAYER_STATE.front === false) {
-        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-        PLAYER_STATE.front = true;
+      walked = Math.round((walked + PLAYER.velocity)*10)/10;
+      if(24 <= walked) {
+        stepped = true;
+        PLAYER.step = PLAYER.step++;
+        PLAYER.walked = 0;
+      }else {
+        PLAYER.walked = walked;
       }
-      PLAYER.update({moving: true, state: PLAYER_STATE});
+    }else {
+      // プレイヤーの停止
+      PLAYER.update({moving: false})
     }
-  }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
-    let canMove = true;
+  }else if(KEYS.pressed) {
+    let colliding = false;
+    if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
+      for(let i = 0; i < COLLISION_MAP.length; i++) {
+        const BOUNDARY = COLLISION_MAP[i];
+        const X = BOUNDARY.position.x;
+        const Y = Math.round((BOUNDARY.position.y - PLAYER.velocity) * 10)/10;
+        if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+          colliding = true;
+          break;
+        }else {
+          continue;
+        }
+      }
+      if(!colliding) {
+        LIST_MOVABLE.forEach((movable)=>{
+          const X = movable.position.x;
+          const Y = Math.round((movable.position.y - PLAYER.velocity) * 10)/10;
+          movable.update({position: {x: X, y: Y}});
+        });
+        const PLAYER_STATE = PLAYER.state;
+        if(PLAYER_STATE.down === false) {
+          PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+          PLAYER_STATE.down = true;
+        }
+        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
+        PLAYER.update({moving: true, state: PLAYER_STATE});
+      }
+    }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
     for(let i = 0; i < COLLISION_MAP.length; i++) {
       const BOUNDARY = COLLISION_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y + 3}}})) {
-        canMove = false;
+      const X = BOUNDARY.position.x;
+      const Y = Math.round((BOUNDARY.position.y + PLAYER.velocity) * 10)/10;
+      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+        colliding = true;
         break;
       }else {
         continue;
       }
     }
-    if(canMove) {
+    if(!colliding) {
       LIST_MOVABLE.forEach((movable)=>{
-        movable.update({position: {x:movable.position.x, y:movable.position.y + 3}});
+        const X = movable.position.x;
+        const Y = Math.round((movable.position.y + PLAYER.velocity) * 10)/10;
+        movable.update({position: {x: X, y: Y}});
       });
       const PLAYER_STATE = PLAYER.state;
-      if(PLAYER_STATE.back === false) {
+      if(PLAYER_STATE.up === false) {
         PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-        PLAYER_STATE.back = true;
+        PLAYER_STATE.up = true;
       }
+      PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
       PLAYER.update({moving: true, state: PLAYER_STATE});
     }
-  }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
-    let canMove = true;
-    for(let i = 0; i < COLLISION_MAP.length; i++) {
-      const BOUNDARY = COLLISION_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x + 3, y:BOUNDARY.position.y}}})) {
-        canMove = false;
-        break;
-      }else {
-        continue;
+    }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
+      for(let i = 0; i < COLLISION_MAP.length; i++) {
+        const BOUNDARY = COLLISION_MAP[i];
+        const X = Math.round((BOUNDARY.position.x + PLAYER.velocity) * 10)/10;
+        const Y = BOUNDARY.position.y;
+        if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+          colliding = true;
+          break;
+        }else {
+          continue;
+        }
       }
-    }
-    if(canMove) {
-      LIST_MOVABLE.forEach((movable)=>{
-        movable.update({position: {x:movable.position.x + 3, y:movable.position.y}});
-      });
-      const PLAYER_STATE = PLAYER.state;
-      if(PLAYER_STATE.left === false) {
-        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-        PLAYER_STATE.left = true;
+      if(!colliding) {
+        LIST_MOVABLE.forEach((movable)=>{
+          const X = Math.round((movable.position.x + PLAYER.velocity) * 10)/10;
+          const Y = movable.position.y;
+          movable.update({position: {x: X, y: Y}});
+        });
+        const PLAYER_STATE = PLAYER.state;
+        if(PLAYER_STATE.left === false) {
+          PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+          PLAYER_STATE.left = true;
+        }
+        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
+        PLAYER.update({moving: true, state: PLAYER_STATE});
       }
-      PLAYER.update({moving: true, state: PLAYER_STATE});
-    }
-  }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
-    let canMove = true;
-    for(let i = 0; i < COLLISION_MAP.length; i++) {
-      const BOUNDARY = COLLISION_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x - 3, y:BOUNDARY.position.y}}})) {
-        canMove = false;
-        break;
-      }else {
-        continue;
+    }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
+      for(let i = 0; i < COLLISION_MAP.length; i++) {
+        const BOUNDARY = COLLISION_MAP[i];
+        const X = Math.round((BOUNDARY.position.x - PLAYER.velocity) * 10)/10;
+        const Y = BOUNDARY.position.y;
+        if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+          colliding = true;
+          break;
+        }else {
+          continue;
+        }
       }
-    }
-    if(canMove) {
-      LIST_MOVABLE.forEach((movable)=>{
-        movable.update({position: {x:movable.position.x - 3, y:movable.position.y}});
-      });
-      const PLAYER_STATE = PLAYER.state;
-      if(PLAYER_STATE.right === false) {
-        PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
-        PLAYER_STATE.right = true;
+      if(!colliding) {
+        LIST_MOVABLE.forEach((movable)=>{
+          const X = Math.round((movable.position.x - PLAYER.velocity) * 10)/10;
+          const Y = movable.position.y;
+          movable.update({position: {x: X, y: Y}});
+        });
+        const PLAYER_STATE = PLAYER.state;
+        if(PLAYER_STATE.right === false) {
+          PLAYER_STATE[Object.keys(PLAYER_STATE).find(state=>PLAYER_STATE[state])] = false;
+          PLAYER_STATE.right = true;
+        }
+        PLAYER.walked = Math.round((PLAYER.walked + PLAYER.velocity)*10)/10;
+        PLAYER.update({moving: true, state: PLAYER_STATE});
       }
-      PLAYER.update({moving: true, state: PLAYER_STATE});
+    };
+  }else {
+    PLAYER.update({moving: false});
+  }
+  let onPath = false;
+  let onForest = false;
+  //  プレイヤーが道を歩いている場合：1歩 ＝ 4px * 6frames 早歩き
+  for(let i = 0; i < PATH_MAP.length; i++) {
+    const BOUNDARY = PATH_MAP[i];
+    if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y}}})) {
+      onPath = true;
+      PLAYER.movementDelay = 3;
+      PLAYER.velocity = 4;
+      break;
+    }else {
+      continue;
     }
-  };
+  }
+  //  プレイヤーが森を歩いている場合：1歩 ＝ 1px * 12frames　ゆっくり
+  for(let i = 0; i < FOREST_MAP.length; i++) {
+    const BOUNDARY = FOREST_MAP[i];
+    if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y}}})) {
+      onForest = true;
+      PLAYER.movementDelay = 12;
+      PLAYER.velocity = 1;
+      break;
+    }else {
+      continue;
+    }
+  }
+  //  プレイヤーが草原を歩いている場合：1歩 ＝ 2.4px * 5frames　デフォルト
+  if(!onPath && !onForest) {
+    PLAYER.movementDelay = 5;
+    PLAYER.velocity = 2.4;
+  }
+  if(stepped) {
+      console.log("walk")
+      // let encountering = false;
+      // // player never encounter enemies on the path
+      // if(!onPath) {
+      //   let ratio = PLAYER.rateEncounter;
+      //   if(onForest) {
+      //     // Double ratio of encountering enemy on the forest
+      //     ratio * 2;
+      //   }
+      //   encountering = trueWithRatio(ratio);
+      // }
+      // if(encountering) {
+      //   // start battle
+      //   console.log("battle")
+      // }else {
+        
+      // }
+  }
+  
 
   // Render
   BG.draw();
@@ -231,13 +368,16 @@ function animate() {
   PATH_MAP.forEach(boundary=>{
     boundary.draw();
   })
+  FOREST_MAP.forEach(boundary=>{
+    boundary.draw();
+  })
+  ITEM_MAP.forEach(boundary=>{
+    boundary.draw();
+  })
   WATER_MAP.forEach(boundary=>{
     boundary.draw();
   })
   NAP_MAP.forEach(boundary=>{
-    boundary.draw();
-  })
-  ITEM_MAP.forEach(boundary=>{
     boundary.draw();
   })
 }
@@ -254,28 +394,35 @@ const BG_BATTLE = new Sprite({
   image: IMAGE_BG_BATTLE,
   moving: false
 });
+
+// animateBattle();
 function animateBattle() {
   window.requestAnimationFrame(animateBattle);
   BG_BATTLE.draw();
 }
-// animateBattle();
+// Transition to battle state
+function handleBattleStart() {
+
+}
 
 // Player Move
 window.addEventListener('keydown', (e)=> {
   const TARGET_KEY = e.key;
   for(let key of Object.keys(KEYS)) {
-    if(key != 'lastKey'&&KEYS[key].name === TARGET_KEY) {
+    if(key != 'lastKey'&& KEYS[key].name === TARGET_KEY) {
       KEYS[key].pressed = true;
       KEYS.lastKey = TARGET_KEY;
+      KEYS.pressed = true;
     }
   }
 });
 window.addEventListener('keyup', (e)=> {
   const TARGET_KEY = e.key;
-  PLAYER.update({moving: false});
+  // PLAYER.update({moving: false});
   for(let key of Object.keys(KEYS)) {
-    if(key != 'lastKey'&&KEYS[key].name === TARGET_KEY) {
+    if(key != 'lastKey' && KEYS[key].name === TARGET_KEY) {
       KEYS[key].pressed = false;
+      KEYS.pressed = false;
     }
   }
 });

@@ -50,7 +50,7 @@ class Sprite {
     }
     if(1 < this.frames.max) this.frames.elapsed++;
 
-    if(this.frames.elapsed % this.movementDelay != 0) return;
+    if(this.frames.elapsed % this.movementDelay !== 0) return;
     if(this.frames.val < this.frames.max - 1) this.frames.val++;
     else this.frames.val = 0;
   }
@@ -65,18 +65,17 @@ class Sprite {
 }
 
 const CHARACTER_STATE = {
-  front: true,
-  back: false,
+  down: true,
+  up: false,
   left: false,
   right: false,
 }
 
 class Character extends Sprite {
-  constructor({canvas, canvasContent, position = {x: 0, y: 0}, movementDelay = 5, image, frames = {max: 4}, moving = false, sprite, state = CHARACTER_STATE}) {
+  constructor({canvas, canvasContent, position = {x: 0, y: 0}, movementDelay = 2, image, frames = {max: 4}, moving = false, sprite}) {
     super({canvas, canvasContent, position, movementDelay, image, frames, moving});
     this.sprite = sprite;
     this.state = CHARACTER_STATE;
-    this.walk = this.frames.elapsed % this.movementDelay;
     this.image.onload = () => {
       this.position = {
         x: this.canvas.width/2 - this.image.width/this.frames.max/2,
@@ -95,5 +94,28 @@ class Character extends Sprite {
     }
     this.state = state;
     this.image = this.sprite[Object.keys(this.state).find(state=>this.state[state])];
+    if(state) {
+      this.frames.val = 0;
+    }
   }
+}
+
+class Player extends Character {
+  constructor({canvas, canvasContent, position = {x: 0, y: 0},
+               movementDelay = 5, image, frames = {max: 4}, moving = false, 
+               sprite, velocity = 2.4, rateEncounter = 0.1}) {
+    super({canvas, canvasContent, position, movementDelay, image, frames, moving, sprite});
+    this.velocity = velocity;
+    this.rateEncounter = rateEncounter;
+    this.step = 0;
+    this.walked = 0;
+  }
+  update({position=this.position, moving=false, state=this.state}) {
+    super.update({position, moving, state});
+    if(state) {
+      this.frames.val = 0;
+    }
+    
+  }
+
 }
