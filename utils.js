@@ -1,13 +1,11 @@
 import { Boundary } from './classes.js';
 
-// Utility Functions
 function rectCollision({rect1, rect2}) {
-  return (
-    rect2.position.x <= rect1.position.x + rect1.width && 
-    rect1.position.x <= rect2.position.x + rect2.width &&
-    rect2.position.y <= rect1.position.y + rect1.height &&
-    rect1.position.y <= rect2.position.y + rect2.height
-  )
+  const RESULT = (rect2.position.x <= rect1.position.x + rect1.width && 
+  rect1.position.x <= rect2.position.x + rect2.width &&
+  rect2.position.y <= rect1.position.y + rect1.height &&
+  rect1.position.y <= rect2.position.y + rect2.height);
+  return RESULT;
 }
 function makeMap(array, canvas, canvasContent, offset) {
   const ARRAY_MAP = [];

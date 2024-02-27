@@ -1,4 +1,5 @@
 import { CHARACTER_STATE } from "./types.js";
+import { rectCollision } from './utils.js';
 
 class Boundary {
   static width = 48 // 12*12(TILE) * 400 (ZOOM)
@@ -18,6 +19,11 @@ class Boundary {
   update({position}) {
     this.position.x = position.x;
     this.position.y = position.y;
+  }
+  updatePositionBy(xChange, yChange) {
+    // 小数を含む場合の対策
+    this.position.x =  Math.round((this.position.x + xChange) * 10)/10;
+    this.position.y = Math.round((this.position.y + yChange) * 10)/10;
   }
 }
 
@@ -83,6 +89,11 @@ class Sprite {
       this.frames.val = 0;
     }
   }
+  updatePositionBy(xChange, yChange) {
+    // 小数を含む場合の対策
+    this.position.x =  Math.round((this.position.x + xChange) * 10)/10;
+    this.position.y = Math.round((this.position.y + yChange) * 10)/10;
+  }
 }
 
 class Character extends Sprite {
@@ -102,6 +113,7 @@ class Player extends Character {
     this.sprite = sprite;
     this.velocity = velocity;
     this.moved = 0;
+    this.stepMove = 24;
     this.image.onload = () => {
       this.positionCenter();
       this.width = this.image.width / this.frames.max;
@@ -131,20 +143,68 @@ class Player extends Character {
         break;
     }
   }
-  update({position, moving, state, step}) {
+  update({position, moving}) {
     super.update({position, moving});
-    if(state) {
-      this.state = state;
-      this._updateImage(state);
+  }
+  step() {
+    this.data.step ++;
+    this.moved = 0;
+  }
+  move() {
+    this.moving = true;
+    this.moved = Math.round((this.moved + this.velocity)*10)/10;
+  }
+  stop() {
+    this.moving = false;
+    this.moved = 0;
+    // 左右が交互に前進する（frame.val偶数番はプレイヤーが止まっているフレーム）
+    while(this.frames.val % 2 === 1) {
+      this.frames.val ++;
+      if( (this.frames.max - 1) < this.frames.val ) {
+        this.frames.val = 0;
+        break;
+      }
+    }
+  }
+  changeStateTo(newState) {
+    if(this.state !== newState) {
+      this.state = newState;
+      this._updateImage(newState);
       this.frames.val = 0;
       this.moved = 0;
     }
-    if(step) {
-      this.data.step = step;
-      this.moved = 0;
+  }
+  changeVelocity(newVelocity) {
+    if(this.velocity !== newVelocity) {
+      this.velocity = newVelocity;
+      this.movementDelay = Math.round(this.stepMove / newVelocity / 2 * 10) / 10;
     }
   }
-
+  isColliding(rectangle) {
+    const IS_COLLIDING = rectCollision({rect1: this, rect2: rectangle});
+    return IS_COLLIDING;
+  }
+  nextStepDirection() {
+      let xChange = 0;
+      let yChange = 0;
+      switch (this.state) {
+        case CHARACTER_STATE.down:
+          yChange = this.velocity;
+          break;
+        case CHARACTER_STATE.up:
+          yChange = -this.velocity;
+          break;
+        case CHARACTER_STATE.left:
+          xChange = -this.velocity;
+          break;
+        case CHARACTER_STATE.right:
+          xChange = this.velocity;
+          break;
+      }
+      
+      const DIRECTION = {x: xChange, y: yChange};
+      return DIRECTION;
+  }
 }
 
 export { Boundary, Sprite, Character, Player };

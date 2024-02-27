@@ -125,33 +125,51 @@ fetchJsonData('./data/gameData.json')
 
     // アップデート
     //  プレイヤー歩行：1歩 ＝ 24px/一歩分足が動くアニメーション
-    let moved = PLAYER.moved;
     let stepped = false;
     //  一歩のアニメーションが終了していない場合
-    if(PLAYER.moving && 0 < moved && moved < 24) {
-      const STATE = PLAYER.state;
-      let xChange = 0;
-      let yChange = 0;
-      switch (STATE) {
-        case CHARACTER_STATE.down:
-          yChange = -PLAYER.velocity;
-          break;
-        case CHARACTER_STATE.up:
-          yChange = PLAYER.velocity;
-          break;
-        case CHARACTER_STATE.left:
-          xChange = PLAYER.velocity;
-          break;
-        case CHARACTER_STATE.right:
-          xChange = -PLAYER.velocity;
-          break;
-      }
+    if(PLAYER.moving && 0 < PLAYER.moved && PLAYER.moved < PLAYER.stepMove) {
+      const NEXT_MOVE = PLAYER.nextStepDirection();
       let colliding = false;
       for(let i = 0; i < COLLISION_MAP.length; i++) {
         const BOUNDARY = COLLISION_MAP[i];
-        const X = Math.round((BOUNDARY.position.x + xChange) * 10)/10;
-        const Y = Math.round((BOUNDARY.position.y + yChange) * 10)/10;
-        if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
+        const X = Math.round((BOUNDARY.position.x - NEXT_MOVE.x) * 10)/10;
+        const Y = Math.round((BOUNDARY.position.y - NEXT_MOVE.y) * 10)/10;
+        if(PLAYER.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
+          colliding = true;
+        }
+      }
+      if(!colliding) {
+        LIST_MOVABLE.forEach((movable)=>{
+          movable.updatePositionBy(-NEXT_MOVE.x, -NEXT_MOVE.y);
+        });
+
+        PLAYER.move();
+        if(PLAYER.stepMove <= PLAYER.moved) {
+          stepped = true;
+          PLAYER.step();
+        }
+      }else {
+        PLAYER.stop();
+      }
+    }
+    //  歩行アニメーションの開始
+    else if(KEYS.pressed) {
+      if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
+        PLAYER.changeStateTo(CHARACTER_STATE.down);
+      }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
+        PLAYER.changeStateTo(CHARACTER_STATE.up);
+      }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
+        PLAYER.changeStateTo(CHARACTER_STATE.left);
+      }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
+        PLAYER.changeStateTo(CHARACTER_STATE.right);
+      };
+      let colliding = false;
+      const NEXT_MOVE = PLAYER.nextStepDirection();
+      for(let i = 0; i < COLLISION_MAP.length; i++) {
+        const BOUNDARY = COLLISION_MAP[i];
+        const X = Math.round((BOUNDARY.position.x - NEXT_MOVE.x) * 10)/10;
+        const Y = Math.round((BOUNDARY.position.y - NEXT_MOVE.y) * 10)/10;
+        if(PLAYER.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
           colliding = true;
           break;
         }else {
@@ -160,129 +178,16 @@ fetchJsonData('./data/gameData.json')
       }
       if(!colliding) {
         LIST_MOVABLE.forEach((movable)=>{
-          const X = Math.round((movable.position.x + xChange) * 10)/10;
-          const Y = Math.round((movable.position.y + yChange) * 10)/10;
-          movable.update({position: {x: X, y: Y}});
+          movable.updatePositionBy(-NEXT_MOVE.x, -NEXT_MOVE.y);
         });
-        moved = Math.round((moved + PLAYER.velocity)*10)/10;
-        if(24 <= moved) {
-          stepped = true;
-          PLAYER.update({step: PLAYER.data.step++});
-        }else {
-          PLAYER.moved = moved;
-        }
+        PLAYER.move();
       }else {
-        PLAYER.update({moving: false})
+        PLAYER.stop();
       }
-    }
-    //  歩行アニメーションの開始
-    else if(KEYS.pressed) {
-      let colliding = false;
-      if(KEYS.down.pressed && KEYS.lastKey == KEYS.down.name) {
-        for(let i = 0; i < COLLISION_MAP.length; i++) {
-          const BOUNDARY = COLLISION_MAP[i];
-          const X = BOUNDARY.position.x;
-          const Y = Math.round((BOUNDARY.position.y - PLAYER.velocity) * 10)/10;
-          if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
-            colliding = true;
-            break;
-          }else {
-            continue;
-          }
-        }
-        if(!colliding) {
-          LIST_MOVABLE.forEach((movable)=>{
-            const X = movable.position.x;
-            const Y = Math.round((movable.position.y - PLAYER.velocity) * 10)/10;
-            movable.update({position: {x: X, y: Y}});
-          });
-          if(PLAYER.state === CHARACTER_STATE.down) {
-            PLAYER.update({moving: true});
-          }else {
-            PLAYER.update({moving: true, state: CHARACTER_STATE.down});
-          }
-          PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
-        }
-      }else if(KEYS.up.pressed && KEYS.lastKey == KEYS.up.name) {
-        for(let i = 0; i < COLLISION_MAP.length; i++) {
-          const BOUNDARY = COLLISION_MAP[i];
-          const X = BOUNDARY.position.x;
-          const Y = Math.round((BOUNDARY.position.y + PLAYER.velocity) * 10)/10;
-          if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
-            colliding = true;
-            break;
-          }else {
-            continue;
-          }
-        }
-        if(!colliding) {
-          LIST_MOVABLE.forEach((movable)=>{
-            const X = movable.position.x;
-            const Y = Math.round((movable.position.y + PLAYER.velocity) * 10)/10;
-            movable.update({position: {x: X, y: Y}});
-          });
-          if(PLAYER.state === CHARACTER_STATE.up) {
-            PLAYER.update({moving: true});
-          }else {
-            PLAYER.update({moving: true, state: CHARACTER_STATE.up});
-          }
-          PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
-        }
-      }else if(KEYS.left.pressed && KEYS.lastKey == KEYS.left.name) {
-        for(let i = 0; i < COLLISION_MAP.length; i++) {
-          const BOUNDARY = COLLISION_MAP[i];
-          const X = Math.round((BOUNDARY.position.x + PLAYER.velocity) * 10)/10;
-          const Y = BOUNDARY.position.y;
-          if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
-            colliding = true;
-            break;
-          }else {
-            continue;
-          }
-        }
-        if(!colliding) {
-          LIST_MOVABLE.forEach((movable)=>{
-            const X = Math.round((movable.position.x + PLAYER.velocity) * 10)/10;
-            const Y = movable.position.y;
-            movable.update({position: {x: X, y: Y}});
-          });
-          if(PLAYER.state === CHARACTER_STATE.left) {
-            PLAYER.update({moving: true});
-          }else {
-            PLAYER.update({moving: true, state: CHARACTER_STATE.left});
-          }
-          PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
-        }
-      }else if(KEYS.right.pressed && KEYS.lastKey == KEYS.right.name) {
-        for(let i = 0; i < COLLISION_MAP.length; i++) {
-          const BOUNDARY = COLLISION_MAP[i];
-          const X = Math.round((BOUNDARY.position.x - PLAYER.velocity) * 10)/10;
-          const Y = BOUNDARY.position.y;
-          if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x: X, y: Y}}})) {
-            colliding = true;
-            break;
-          }else {
-            continue;
-          }
-        }
-        if(!colliding) {
-          LIST_MOVABLE.forEach((movable)=>{
-            const X = Math.round((movable.position.x - PLAYER.velocity) * 10)/10;
-            const Y = movable.position.y;
-            movable.update({position: {x: X, y: Y}});
-          });
-          if(PLAYER.state === CHARACTER_STATE.right) {
-            PLAYER.update({moving: true});
-          }else {
-            PLAYER.update({moving: true, state: CHARACTER_STATE.right});
-          }
-          PLAYER.moved = Math.round((PLAYER.moved + PLAYER.velocity)*10)/10;
-        }
-      };
     }
     //  キーボード/ボタンが押されていない場合＝プレイヤー停止
     else {
-      PLAYER.update({moving: false});
+      PLAYER.stop();
     }
 
     let onPath = false;
@@ -290,31 +195,24 @@ fetchJsonData('./data/gameData.json')
     //  プレイヤーが道を歩いている場合：1歩 ＝ 4px * 6frames 早歩き
     for(let i = 0; i < PATH_MAP.length; i++) {
       const BOUNDARY = PATH_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y}}})) {
+      if(PLAYER.isColliding(BOUNDARY)) {
         onPath = true;
-        PLAYER.movementDelay = 3;
-        PLAYER.velocity = 4;
+        PLAYER.changeVelocity(4);
         break;
-      }else {
-        continue;
       }
     }
     //  プレイヤーが森を歩いている場合：1歩 ＝ 1px * 12frames　ゆっくり
     for(let i = 0; i < FOREST_MAP.length; i++) {
       const BOUNDARY = FOREST_MAP[i];
-      if(rectCollision({rect1:PLAYER, rect2:{...BOUNDARY, position: {x:BOUNDARY.position.x, y:BOUNDARY.position.y}}})) {
+      if(PLAYER.isColliding(BOUNDARY)) {
         onForest = true;
-        PLAYER.movementDelay = 12;
-        PLAYER.velocity = 1;
+        PLAYER.changeVelocity(1);
         break;
-      }else {
-        continue;
       }
     }
     //  プレイヤーが草原を歩いている場合：1歩 ＝ 2.4px * 5frames　デフォルト
     if(!onPath && !onForest) {
-      PLAYER.movementDelay = 5;
-      PLAYER.velocity = 2.4;
+      PLAYER.changeVelocity(2.4);
     }
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
@@ -333,7 +231,7 @@ fetchJsonData('./data/gameData.json')
         }
         if(encountering) {
           console.log("battle")
-          PLAYER.update({moving: false});
+          PLAYER.stop();
           // 通常アニメーション停止
           window.cancelAnimationFrame(ANIMATION_ID);
           // 戦闘アニメーションへの変遷、開始
@@ -375,6 +273,12 @@ fetchJsonData('./data/gameData.json')
     window.requestAnimationFrame(animateBattle);
     BG_BATTLE.draw();
   }
+  // test
+  // gsap.to('#playerCtr', {
+  //   left: "100%",
+  //   opacity: 0, 
+  // });
+  // animateBattle();
   // 戦闘アニメーションへの開始
   function handleBattleStart() {
     gsap.to('#playerCtr', {
