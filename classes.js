@@ -12,18 +12,14 @@ class Boundary {
     this.height = 48;
   }
   draw() {
-    // C.fillStyle =  '#FF0000';
-    this.c.fillStyle =  'transparent';
+    C.fillStyle =  '#FF0000';
+    // this.c.fillStyle =  'transparent';
     this.c.fillRect(this.position.x, this.position.y, this.width, this.height);
   }
-  update({position}) {
-    this.position.x = position.x;
-    this.position.y = position.y;
-  }
-  updatePositionBy(xChange, yChange) {
+  updatePositionBy({x, y}) {
     // 小数を含む場合の対策
-    this.position.x =  Math.round((this.position.x + xChange) * 10)/10;
-    this.position.y = Math.round((this.position.y + yChange) * 10)/10;
+    this.position.x =  Math.round((this.position.x + x) * 10)/10;
+    this.position.y = Math.round((this.position.y + y) * 10)/10;
   }
 }
 
@@ -37,6 +33,8 @@ class Sprite {
     this.movementDelay = movementDelay;
     this.frames = {...frames, val: 0, elapsed: 1};
     this.moving = moving;
+    this.drawWidth = 0;
+    this.drawHeight = 0;
     this.image.onload = () => {
       this.width = this.image.width / this.frames.max;
       this.height = this.image.height;
@@ -52,8 +50,8 @@ class Sprite {
         this.height,
         this.position.x,
         this.position.y,
-        this.width,
-        this.height,
+        this.drawWidth?this.drawWidth:this.width,
+        this.drawHeight?this.drawHeight:this.height,
     );
 
     if (!this.moving) {
@@ -96,6 +94,10 @@ class Sprite {
     // 小数を含む場合の対策
     this.position.x =  Math.round((this.position.x + x) * 10)/10;
     this.position.y = Math.round((this.position.y + y) * 10)/10;
+  }
+  updateDrawSize({width, height}) {
+    this.drawWidth = width;
+    this.drawHeight = height;
   }
 }
 
@@ -217,6 +219,8 @@ class PlayerBattle extends Character {
       }
       this.width = this.image.width / this.frames.max;
       this.height = this.image.height;
+      this.drawWidth = this.width;
+      this.drawHeight = this.height;
     } 
   }
   draw() {

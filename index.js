@@ -206,28 +206,28 @@ fetchJsonData('./data/gameData.json')
     }
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
-    if(stepped) {
-        console.log("walk")
-        let encountering = false;
-        // プレイヤーが道を歩いている場合: 0％
-        if(!onPath) {
-          // プレイヤーが草原を歩いている場合: 固有の出合い率
-          let ratio = PLAYER.data.rateEncounter;
-          // プレイヤーが森を歩いている場合: 固有の出合い率*2
-          if(onForest) {
-            ratio * 2;
-          }
-          encountering = trueWithRatio(ratio);
-        }
-        if(encountering) {
-          console.log("battle")
-          PLAYER.stop();
-          // 通常アニメーション停止
-          window.cancelAnimationFrame(ANIMATION_ID);
-          // 戦闘アニメーションへの変遷、開始
-          handleBattleStart();
-        }
-    }
+    // if(stepped) {
+    //     console.log("walk")
+    //     let encountering = false;
+    //     // プレイヤーが道を歩いている場合: 0％
+    //     if(!onPath) {
+    //       // プレイヤーが草原を歩いている場合: 固有の出合い率
+    //       let ratio = PLAYER.data.rateEncounter;
+    //       // プレイヤーが森を歩いている場合: 固有の出合い率*2
+    //       if(onForest) {
+    //         ratio * 2;
+    //       }
+    //       encountering = trueWithRatio(ratio);
+    //     }
+    //     if(encountering) {
+    //       console.log("battle")
+    //       PLAYER.stop();
+    //       // 通常アニメーション停止
+    //       window.cancelAnimationFrame(ANIMATION_ID);
+    //       // 戦闘アニメーションへの変遷、開始
+    //       handleBattleStart();
+    //     }
+    // }
 
 
     // Render
