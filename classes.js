@@ -42,57 +42,60 @@ class Sprite {
       this.height = this.image.height;
     };
   }
+  _drawImageAndAnimate() {
+    // イメージの描写
+    this.c.drawImage(
+        this.image,
+        this.frames.val * this.width,
+        0,
+        this.width,
+        this.height,
+        this.position.x,
+        this.position.y,
+        this.width,
+        this.height,
+    );
+
+    if (!this.moving) {
+        return;
+    }
+    if (1 < this.frames.max) {
+        this.frames.elapsed++;
+    }
+    if (this.frames.elapsed % this.movementDelay !== 0) {
+        return;
+    }
+    if (this.frames.val < this.frames.max - 1) {
+        this.frames.val++;
+    } else {
+        this.frames.val = 0;
+    }
+  }
   draw() {
     if(!this.width || !this.height) {
       if(this.image.complete) {
         this.width = this.image.width / this.frames.max;
         this.height = this.image.height;
+        this._drawImageAndAnimate();
       }else {
         this.image.onload = () => {
           this.width = this.image.width / this.frames.max;
           this.height = this.image.height;
-          this.draw();
+          this._drawImageAndAnimate();
         };
       }
-    }
-    this.c.drawImage(
-      this.image,
-      this.frames.val * this.width,
-      0,
-      this.width,
-      this.height,
-      this.position.x,
-      this.position.y,
-      this.width,
-      this.height,
-    );
-
-    if(!this.moving){
-      return
-    }
-
-    if(1 < this.frames.max) this.frames.elapsed++;
-    if(this.frames.elapsed % this.movementDelay !== 0) return;
-    if(this.frames.val < this.frames.max - 1) {
-      this.frames.val++
     }else {
-      this.frames.val = 0
-    };
-  }
-  update({position, moving=this.moving}) {
-    if(position) {
-      this.position.x = position.x;
-      this.position.y = position.y;
-    }
-    this.moving = moving;
-    if(!this.moving){
-      this.frames.val = 0;
+      this._drawImageAndAnimate();
     }
   }
-  updatePositionBy(xChange, yChange) {
+  updatePosition({x, y}) {
+    this.position.x = x;
+    this.position.y = y;
+  }
+  updatePositionBy({x, y}) {
     // 小数を含む場合の対策
-    this.position.x =  Math.round((this.position.x + xChange) * 10)/10;
-    this.position.y = Math.round((this.position.y + yChange) * 10)/10;
+    this.position.x =  Math.round((this.position.x + x) * 10)/10;
+    this.position.y = Math.round((this.position.y + y) * 10)/10;
   }
 }
 
@@ -142,9 +145,6 @@ class Player extends Character {
         this.image = this.sprite.right;
         break;
     }
-  }
-  update({position, moving}) {
-    super.update({position, moving});
   }
   step() {
     this.data.step ++;
@@ -207,4 +207,55 @@ class Player extends Character {
   }
 }
 
-export { Boundary, Sprite, Character, Player };
+class PlayerBattle extends Character {
+  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, data}) {
+    super({canvas, canvasContent, position, image, movementDelay, frames, moving, data});
+    this.image.onload = () => {
+      this.position = {
+        x: canvas.width / 6,
+        y: canvas.height - this.image.height
+      }
+      this.width = this.image.width / this.frames.max;
+      this.height = this.image.height;
+    } 
+  }
+  draw() {
+    if(!this.position) {
+      if(this.image.complete) {
+        this.position = {
+          x: canvas.width / 6,
+          y: canvas.height - this.image.height
+        }
+        super.draw();
+      }else {
+        this.image.onload = () => {
+          this.position = {
+            x: canvas.width / 6,
+            y: canvas.height - this.image.height
+          }
+          super.draw();
+        };
+      }
+    }else {
+      super.draw();
+    }
+  }
+  // constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, data}) {
+  //   super({canvas, canvasContent, position, image, movementDelay, frames, moving, data});
+  //   if(this.image.complete) {
+  //     this.position = {
+  //       x: canvas.width / 6,
+  //       y: canvas.height - this.image.height
+  //     }
+  //   }else {
+  //     this.image.onload = () => {
+  //       this.position = {
+  //         x: canvas.width / 6,
+  //         y: canvas.height - this.image.height
+  //       }
+  //     };
+  //   }
+  // }
+}
+
+export { Boundary, Sprite, Character, Player, PlayerBattle };

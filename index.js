@@ -1,6 +1,6 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom } from './utils.js';
-import { Boundary, Sprite, Character, Player } from './classes.js';
+import { Boundary, Sprite, Character, Player, PlayerBattle } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE } from "./types.js";
 
@@ -80,17 +80,6 @@ fetchJsonData('./data/gameData.json')
   });
   IMG_FG_OBJ.src = './img/map/map--foreground.png';
   const IMG_BG_BATTLE = new Image();
-  const BG_BATTLE = new Sprite({
-    canvas: CANVAS,
-    canvasContent: C,
-    position: {
-      x: 0,
-      y: 0,
-    },
-    image: IMG_BG_BATTLE,
-    moving: false
-  });
-  IMG_BG_BATTLE.src = './img/battle/bg_battle.png';
   
   // プレイヤー決定＊
   const PLAYER_DATA = DATA.player.male;
@@ -103,6 +92,7 @@ fetchJsonData('./data/gameData.json')
   const PLAYER = new Player({
     canvas: CANVAS,
     canvasContent: C,
+    position: {x:0,y:0},
     image: PLAYER_SPRITES.down,
     sprite: PLAYER_SPRITES,
     data: PLAYER_DATA
@@ -140,7 +130,7 @@ fetchJsonData('./data/gameData.json')
       }
       if(!colliding) {
         LIST_MOVABLE.forEach((movable)=>{
-          movable.updatePositionBy(-NEXT_MOVE.x, -NEXT_MOVE.y);
+          movable.updatePositionBy({x: -NEXT_MOVE.x, y: -NEXT_MOVE.y});
         });
 
         PLAYER.move();
@@ -178,7 +168,7 @@ fetchJsonData('./data/gameData.json')
       }
       if(!colliding) {
         LIST_MOVABLE.forEach((movable)=>{
-          movable.updatePositionBy(-NEXT_MOVE.x, -NEXT_MOVE.y);
+          movable.updatePositionBy({x: -NEXT_MOVE.x, y: -NEXT_MOVE.y});
         });
         PLAYER.move();
       }else {
@@ -264,17 +254,35 @@ fetchJsonData('./data/gameData.json')
     })
   }
   animate();
-
-  // 戦闘アニメーション用Sprites
   
 
   // 戦闘アニメーション
+  const BG_BATTLE = new Sprite({
+    canvas: CANVAS,
+    canvasContent: C,
+    position: {
+      x: 0,
+      y: 0,
+    },
+    image: IMG_BG_BATTLE,
+    moving: false
+  });
+  IMG_BG_BATTLE.src = './img/battle/bg_battle.png';
+
+  const PLAYER_BATTLE = new PlayerBattle({
+    canvas: CANVAS,
+    canvasContent: C,
+    image: PLAYER_SPRITES.up,
+    data: PLAYER_DATA
+  });
+
   function animateBattle() {
     window.requestAnimationFrame(animateBattle);
     BG_BATTLE.draw();
+    PLAYER_BATTLE.draw();
   }
   // test
-  // gsap.to('#playerCtr', {
+  // gsap.set('#playerCtr', {
   //   left: "100%",
   //   opacity: 0, 
   // });
@@ -331,7 +339,6 @@ fetchJsonData('./data/gameData.json')
   });
   window.addEventListener('keyup', (e)=> {
     const TARGET_KEY = e.key;
-    // PLAYER.update({moving: false});
     for(let key of Object.keys(KEYS)) {
       if(key != 'lastKey' && KEYS[key].name === TARGET_KEY) {
         KEYS[key].pressed = false;
