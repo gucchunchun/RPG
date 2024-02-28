@@ -20,8 +20,8 @@ function makeMap(array, canvas, canvasContent, offset) {
           canvas: canvas,
           canvasContent: canvasContent,
           position: {
-            x: colIndex * Boundary.width + offset.x,
-            y: rowIndex * Boundary.height + offset.y
+            x: colIndex * Boundary.WIDTH + offset.x,
+            y: rowIndex * Boundary.HEIGHT + offset.y
           }
         }))
       }
@@ -38,7 +38,8 @@ function trueWithRatio(ratio) {
   }
 }
 function choiceRandom(array) {
-  const RESULT = array[Math.random() * (array.length - 1)];
+  const INDEX = Math.round(Math.random() * (array.length - 1));
+  const RESULT = array[INDEX];
   return RESULT;
 }
 

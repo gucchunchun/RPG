@@ -1,3 +1,8 @@
+:root {
+  --space: 8px;
+  --battle-ctr--height: 30%;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -57,12 +62,13 @@ body {
   border-collapse: collapse;
   bottom: -30%;
   display: flex;
-  height: 30%;
+  gap: var(--space);
+  height: var(--battle-ctr--height);
   left: 50%;
   position: absolute;
   transform: translateX(-50%);
-  width: calc(100% - 2rem);
-  padding: 8px;
+  width: calc(100% - var(--space) * 2);
+  padding: var(--space);
 }
 .battle__action__ctr {
   display: flex;
@@ -79,7 +85,7 @@ body {
   width: 100%;
 }
 .battle__action__dialog {
-  padding: 1rem;
+  padding: var(--space);
 }
 .battle__action__option__ctr {
   background-color: #fff;

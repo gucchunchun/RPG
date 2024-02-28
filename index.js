@@ -1,8 +1,8 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom } from './utils.js';
-import { Boundary, Sprite, Character, Player, PlayerBattle } from './classes.js';
+import { Boundary, Sprite, Character, Player, CharacterBattle } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
-import { CHARACTER_STATE } from "./types.js";
+import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
 
 // グローバル設定
 const FPS = 60; // 1フレームあたり 1000/60 millisecond
@@ -32,6 +32,10 @@ const KEYS =  {
   lastKey: undefined
 }
 const PATH_TO_CHAR_IMG = './img/character/';
+const CANVAS_WIDTH = 1024;
+const CANVAS_HEIGHT = 576;
+const BATTLE_CTR_HEIGHT = Math.round(CANVAS_HEIGHT * 0.3);
+const SPACE = 8;
 
 // HTML要素
 const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('button__move');
@@ -42,8 +46,8 @@ fetchJsonData('./data/gameData.json')
   // Canvas
   const CANVAS = document.getElementById('canvas');
   const C = CANVAS.getContext('2d');
-  CANVAS.width = 1024;
-  CANVAS.height = 576;
+  CANVAS.width = CANVAS_WIDTH;
+  CANVAS.height = CANVAS_HEIGHT;
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
   // 衝突検出用マップ
@@ -79,7 +83,6 @@ fetchJsonData('./data/gameData.json')
     image: IMG_FG_OBJ
   });
   IMG_FG_OBJ.src = './img/map/map--foreground.png';
-  const IMG_BG_BATTLE = new Image();
   
   // プレイヤー決定＊
   const PLAYER_DATA = DATA.player.male;
@@ -95,7 +98,8 @@ fetchJsonData('./data/gameData.json')
     position: {x:0,y:0},
     image: PLAYER_SPRITES.down,
     sprite: PLAYER_SPRITES,
-    data: PLAYER_DATA
+    data: PLAYER_DATA,
+    pathToImg: PATH_TO_CHAR_IMG,
   });
 
   // プレイヤーの動きに合わせて移動させるもののリスト
@@ -206,28 +210,28 @@ fetchJsonData('./data/gameData.json')
     }
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
-    // if(stepped) {
-    //     console.log("walk")
-    //     let encountering = false;
-    //     // プレイヤーが道を歩いている場合: 0％
-    //     if(!onPath) {
-    //       // プレイヤーが草原を歩いている場合: 固有の出合い率
-    //       let ratio = PLAYER.data.rateEncounter;
-    //       // プレイヤーが森を歩いている場合: 固有の出合い率*2
-    //       if(onForest) {
-    //         ratio * 2;
-    //       }
-    //       encountering = trueWithRatio(ratio);
-    //     }
-    //     if(encountering) {
-    //       console.log("battle")
-    //       PLAYER.stop();
-    //       // 通常アニメーション停止
-    //       window.cancelAnimationFrame(ANIMATION_ID);
-    //       // 戦闘アニメーションへの変遷、開始
-    //       handleBattleStart();
-    //     }
-    // }
+    if(stepped) {
+        console.log("walk")
+        let encountering = false;
+        // プレイヤーが道を歩いている場合: 0％
+        if(!onPath) {
+          // プレイヤーが草原を歩いている場合: 固有の出合い率
+          let ratio = PLAYER.data.rateEncounter;
+          // プレイヤーが森を歩いている場合: 固有の出合い率*2
+          if(onForest) {
+            ratio * 2;
+          }
+          encountering = trueWithRatio(ratio);
+        }
+        if(encountering) {
+          console.log("battle")
+          PLAYER.stop();
+          // 通常アニメーション停止
+          window.cancelAnimationFrame(ANIMATION_ID);
+          // 戦闘アニメーションへの変遷、開始
+          handleBattleStart();
+        }
+    }
 
 
     // Render
@@ -256,7 +260,8 @@ fetchJsonData('./data/gameData.json')
   animate();
   
 
-  // 戦闘アニメーション
+  // 戦闘シーン
+  const IMG_BG_BATTLE = new Image();
   const BG_BATTLE = new Sprite({
     canvas: CANVAS,
     canvasContent: C,
@@ -269,26 +274,60 @@ fetchJsonData('./data/gameData.json')
   });
   IMG_BG_BATTLE.src = './img/battle/bg_battle.png';
 
-  const PLAYER_BATTLE = new PlayerBattle({
+  const PLAYER_BATTLE = new CharacterBattle({
     canvas: CANVAS,
     canvasContent: C,
     image: PLAYER_SPRITES.up,
-    data: PLAYER_DATA
+    data: PLAYER_DATA,
+    pathToImg: PATH_TO_CHAR_IMG,
+    bottom: BATTLE_CTR_HEIGHT + SPACE
   });
+  const TMP_ENEMY = new Image();
+  const ENEMY_BATTLE = new CharacterBattle({
+    canvas: CANVAS,
+    canvasContent: C,
+    image: TMP_ENEMY,
+    isPlayer: false,
+    pathToImg: PATH_TO_CHAR_IMG,
+    bottom: BATTLE_CTR_HEIGHT + SPACE
+  });
+  TMP_ENEMY.src = `${PATH_TO_CHAR_IMG}skeletonFront.png`;
 
+  // 戦闘時ゲームループ
   function animateBattle() {
-    window.requestAnimationFrame(animateBattle);
+    const ANIMATION_ID = window.requestAnimationFrame(animateBattle);
+    const CURRENT = new Date().getTime();
+    const ELAPSED = CURRENT - previous;
+    // ゲームループのスピード調整
+    if(!(FRAME_INTERVAL <= ELAPSED)){
+      return;
+    }
+    previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
+
+    // Update
+
+    // Render
     BG_BATTLE.draw();
     PLAYER_BATTLE.draw();
+    ENEMY_BATTLE.draw();
   }
+
   // test
   // gsap.set('#playerCtr', {
   //   left: "100%",
   //   opacity: 0, 
   // });
+  // gsap.set('#battleCtr', {
+  //   opacity: 1,
+  //   bottom: `${SPACE}px`,
+  //   duration: 1, 
+  // })
+  // handleBattleStart();
   // animateBattle();
-  // 戦闘アニメーションへの開始
+
+  // 戦闘アニメーションの開始
   function handleBattleStart() {
+
     gsap.to('#playerCtr', {
       left: "100%",
       opacity: 0, 
@@ -311,19 +350,35 @@ fetchJsonData('./data/gameData.json')
             duration: 1, 
           })
           // 戦闘シーンアニメーション開始
+          previous = new Date().getTime();
+          PLAYER_BATTLE.updateData(PLAYER.data);
+          const LIST_ENEMY = [];
+          for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+            for(let enemy of DATA.enemy[i]) {
+              LIST_ENEMY.push(enemy);
+            }
+          }
+          const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+          ENEMY_BATTLE.updateData(ENEMY_DATA);
           animateBattle();
         }
     });
-    const LIST_ENEMY = [];
-    for(let i = 1; i < PLAYER.data.lv; i++) {
-      for(let enemy of DATA.enemy[i]) {
-        LIST_ENEMY.push(enemy);
-      }
-    }
+
+    // data must be up to date
+    
+    // PLAYER_BATTLE.updateData(PLAYER.data);
+    // const LIST_ENEMY = [];
+    // for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+    //   for(let enemy of DATA.enemy[i]) {
+    //     LIST_ENEMY.push(enemy);
+    //   }
+    // }
+    // const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+    // ENEMY_BATTLE.updateData(ENEMY_DATA);
   }
   // 戦闘アニメーションへの終了
   function handleBattleEnd() {
-
+    PLAYER.updateData(PLAYER_BATTLE.data);
   }
 
   // Player Move

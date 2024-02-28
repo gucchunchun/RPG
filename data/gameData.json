@@ -88,7 +88,7 @@
                   "key": 3,
                   "name": "若手サラリーマン",
                   "image": {
-                      "front": "salaryFront.png"
+                      "down": "salaryFront.png"
                   },
                   "cocktail": {
                       "name": "ジントニック",
@@ -103,7 +103,7 @@
                   "key": 4,
                   "name": "イキってる大学生",
                   "image": {
-                      "front": "bossy.png"
+                      "down": "bossy.png"
                   },
                   "cocktail": {
                       "name": "ジンライム",
@@ -120,7 +120,7 @@
                   "key": 5,
                   "name": "近所のおばちゃん",
                   "image": {
-                      "front": "threeBottle.png"
+                      "down": "threeBottle.png"
                   },
                   "cocktail": {
                       "name": "ジンバック",
@@ -135,7 +135,7 @@
                   "key": 6,
                   "name": "スナックのママ",
                   "image": {
-                      "front": "snackFront.png"
+                      "down": "snackFront.png"
                   },
                   "cocktail": {
                       "name": "オレンジブロッサム",
@@ -152,7 +152,7 @@
                   "key": 7,
                   "name": "おじいちゃん",
                   "image": {
-                      "front": "oldFront.png"
+                      "down": "oldFront.png"
                   },
                   "cocktail": {
                       "name": "ギムレット",
@@ -168,7 +168,7 @@
                   "key": 8,
                   "name": "ヴァイキング",
                   "image": {
-                      "front": "vikingFront.png"
+                      "down": "vikingFront.png"
                   },
                   "cocktail": {
                       "name": "ドックスノーズ",
@@ -184,7 +184,7 @@
               "key": 9,
               "name": "ジンマスター",
               "image": {
-                  "front": "owner.png"
+                  "down": "ownerFront.png"
               },
               "cocktail": {
                   "name": "アラウンド・ザ・ワールド",
