@@ -1,5 +1,5 @@
 import { fetchJsonData } from './fetchData.js';
-import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked } from './utils.js';
+import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog } from './utils.js';
 import { Boundary, Sprite, Character, Player, CharacterBattle } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
@@ -211,7 +211,6 @@ fetchJsonData('./data/gameData.json')
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
     if(stepped) {
-        console.log("walk")
         let encountering = false;
         // プレイヤーが道を歩いている場合: 0％
         if(!onPath) {
@@ -224,8 +223,15 @@ fetchJsonData('./data/gameData.json')
           encountering = trueWithRatio(ratio);
         }
         if(encountering) {
-          console.log("battle")
+          console.log('battle');
           PLAYER.stop();
+          for(let key in KEYS) {
+            if(key === 'pressed') {
+              KEYS[key] = false;
+            }else if(key !== 'lastKey') {
+              KEYS[key].pressed = false;
+            }
+          }
           // 通常アニメーション停止
           window.cancelAnimationFrame(ANIMATION_ID);
           // 戦闘アニメーションへの変遷、開始
@@ -257,7 +263,7 @@ fetchJsonData('./data/gameData.json')
       boundary.draw();
     })
   }
-  // animate();
+  animate();
   
 
   // 戦闘シーン
@@ -296,8 +302,8 @@ fetchJsonData('./data/gameData.json')
   // ***
   const BATTLE_ACTION_FIGHT = document.getElementById('fight');
   const BATTLE_ACTION_RUN = document.getElementById('run');
-  const BATTLE_DIALOG = document.getElementById('battleDialog');
   const BATTLE_FIGHT_CTR = document.getElementById('battleFightCtr');
+  const BATTLE_DIALOG_CTR = document.getElementById('battleDialogCtr');
   const COCKTAIL_NAME = document.getElementById('cocktailName');
   const BATTLE_ITEM_CTR = document.getElementById('BattleItemCtr');
   const SET_BATTLE_ITEM_BTN = document.getElementById('setBattleItemBtn');
@@ -314,7 +320,22 @@ fetchJsonData('./data/gameData.json')
     previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
 
     // Update
-    // HP === 0 かどうか
+    // HP === 0 かどうかで勝敗
+    if(PLAYER_BATTLE.succeedRun) {
+      window.cancelAnimationFrame(ANIMATION_ID);
+      addBattleDialog(BATTLE_DIALOG_CTR, '逃げることに成功した');
+      setTimeout(handleBattleEnd, 1000);
+    }
+    if(PLAYER_BATTLE.data.hp === 0) {
+      window.cancelAnimationFrame(ANIMATION_ID);
+      addBattleDialog(BATTLE_DIALOG_CTR, '勇者は死んでしまった');
+      setTimeout(handleBattleEnd, 1000);
+    }
+    if(ENEMY_BATTLE.data.hp === 0) {
+      window.cancelAnimationFrame(ANIMATION_ID);
+      addBattleDialog(BATTLE_DIALOG_CTR, '敵は美味しいお酒に酔って眠ってしまった');
+      setTimeout(handleBattleEnd, 1000);
+    }
 
     // Render
     BG_BATTLE.draw();
@@ -323,56 +344,56 @@ fetchJsonData('./data/gameData.json')
   }
 
   // test
-  gsap.set('#playerCtr', {
-    left: "100%",
-    opacity: 0, 
-  });
-  gsap.set('#battleCtr', {
-    opacity: 1,
-    bottom: `${SPACE}px`,
-    duration: 1, 
-  })
-  handleBattleStart();
-  animateBattle();
+  // gsap.set('#playerCtr', {
+  //   left: "100%",
+  //   opacity: 0, 
+  // });
+  // gsap.set('#battleCtr', {
+  //   opacity: 1,
+  //   bottom: `${SPACE}px`,
+  //   duration: 1, 
+  // })
+  // handleBattleStart();
+  // animateBattle();
 
   // 戦闘アニメーションの開始
   function handleBattleStart() {
-
-    // gsap.to('#playerCtr', {
-    //   left: "100%",
-    //   opacity: 0, 
-    // });
-    // gsap.fromTo('#canvasOverlap', 
-    //   {scale:0, opacity: 0.5}, 
-    //   {
-    //     scale:8, 
-    //     opacity: 1, 
-    //     duration: 2, 
-    //     ease: "expoScale(0, 8, power1.inOut)",
-    //     onComplete() {
-    //       gsap.to('#canvasOverlap', {
-    //         opacity: 0,
-    //         duration: 1, 
-    //       })
-    //       gsap.to('#battleCtr', {
-    //         opacity: 1,
-    //         bottom: '1rem',
-    //         duration: 1, 
-    //       })
-    //       // 戦闘シーンアニメーション開始
-    //       previous = new Date().getTime();
-    //       PLAYER_BATTLE.updateData(PLAYER.data);
-    //       const LIST_ENEMY = [];
-    //       for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-    //         for(let enemy of DATA.enemy[i]) {
-    //           LIST_ENEMY.push(enemy);
-    //         }
-    //       }
-    //       const ENEMY_DATA = choiceRandom(LIST_ENEMY);
-    //       ENEMY_BATTLE.updateData(ENEMY_DATA);
-    //       animateBattle();
-    //     }
-    // });
+    addBattleDialog(BATTLE_DIALOG_CTR, 'バトル開始');
+    gsap.to('#playerCtr', {
+      left: "100%",
+      opacity: 0, 
+    });
+    gsap.fromTo('#canvasOverlap', 
+      {scale:0, opacity: 0.5}, 
+      {
+        scale:8, 
+        opacity: 1, 
+        duration: 2, 
+        ease: "expoScale(0, 8, power1.inOut)",
+        onComplete() {
+          gsap.to('#canvasOverlap', {
+            opacity: 0,
+            duration: 1, 
+          })
+          gsap.to('#battleCtr', {
+            opacity: 1,
+            bottom: `${SPACE}px`,
+            duration: 1, 
+          })
+          // 戦闘シーンアニメーション開始
+          previous = new Date().getTime();
+          PLAYER_BATTLE.updateData(PLAYER.data);
+          const LIST_ENEMY = [];
+          for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+            for(let enemy of DATA.enemy[i]) {
+              LIST_ENEMY.push(enemy);
+            }
+          }
+          const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+          ENEMY_BATTLE.updateData(ENEMY_DATA);
+          animateBattle();
+        }
+    });
 
     // data must be up to date
     PLAYER_BATTLE.updateData(PLAYER.data);
@@ -399,17 +420,59 @@ fetchJsonData('./data/gameData.json')
       }
       removeChecked(INPUT_LIST);
     });
+    BATTLE_ACTION_RUN.addEventListener('click', () => {
+      if(PLAYER_BATTLE.run()) {
+        console.log('run');
+      }else {
+        console.log('fail');
+      }
+    });
   }
   // 戦闘アニメーションへの終了
   function handleBattleEnd() {
+    resetBattleCtr();
+    PLAYER_BATTLE.succeedRun = false;
     PLAYER.updateData(PLAYER_BATTLE.data);
+    gsap.to('#battleCtr', {
+      opacity: 0,
+      bottom: '',
+      duration: 1, 
+    });
+    gsap.fromTo('#canvasOverlap', 
+      {scale:0, opacity: 0.5}, 
+      {
+        scale:8, 
+        opacity: 1, 
+        duration: 2, 
+        ease: "expoScale(0, 8, power1.inOut)",
+        onComplete() {
+          gsap.to('#canvasOverlap', {
+            opacity: 0,
+            duration: 1, 
+          })
+          gsap.to('#playerCtr', {
+            opacity: 1,
+            left: '',
+            duration: 1, 
+          })
+          // 通常シーン開始
+          previous = new Date().getTime();
+          animate();
+        }
+    });
+  }
+  function resetBattleCtr() {
+    BATTLE_FIGHT_CTR.classList.remove('active');
+    COCKTAIL_NAME.innerHTML = '';
+    BATTLE_ITEM_CTR.innerHTML = '';
+    BATTLE_DIALOG_CTR.innerHTML = '';
   }
 
   // 通常シーン要素イベント
   window.addEventListener('keydown', (e)=> {
     const TARGET_KEY = e.key;
-    for(let key of Object.keys(KEYS)) {
-      if(key != 'lastKey'&& KEYS[key].name === TARGET_KEY) {
+    for(let key in KEYS) {
+      if(key !== 'lastKey'&& key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
         KEYS[key].pressed = true;
         KEYS.lastKey = TARGET_KEY;
         KEYS.pressed = true;
@@ -418,8 +481,8 @@ fetchJsonData('./data/gameData.json')
   });
   window.addEventListener('keyup', (e)=> {
     const TARGET_KEY = e.key;
-    for(let key of Object.keys(KEYS)) {
-      if(key != 'lastKey' && KEYS[key].name === TARGET_KEY) {
+    for(let key in KEYS) {
+      if(key !== 'lastKey' && key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
         KEYS[key].pressed = false;
         KEYS.pressed = false;
       }

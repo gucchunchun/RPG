@@ -1,5 +1,5 @@
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
-import { rectCollision } from './utils.js';
+import { rectCollision, trueWithRatio } from './utils.js';
 
 class Boundary {
   static WIDTH = 48 // 12*12(TILE) * 400 (ZOOM)
@@ -256,6 +256,7 @@ class CharacterBattle extends Character {
     super({canvas, canvasContent, position, image, movementDelay, frames, moving, isPlayer, data, pathToImg});
     this.isPlayer = isPlayer;
     this.bottom = bottom;
+    this.succeedRun = false;
     this.drawWidth = this.canvas.width * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO);
     this.drawHeight = this.canvas.width * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO);
     this.image.onload = () => {
@@ -320,6 +321,14 @@ class CharacterBattle extends Character {
   }
   recoverHP(amount) {
     this.data.hp += amount? amount : 1;
+  }
+  run() {
+    if(trueWithRatio(this.data.rateRun)) {
+      this.succeedRun = true;
+      return true;
+    }else {
+      return false;
+    }
   }
 }
 

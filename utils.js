@@ -90,5 +90,10 @@ function containsSame({list1, list2}) {
   }
   return true;
 }
-
-export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked };
+function addBattleDialog(battleDialogCtr, text) {
+  const P = document.createElement('p');
+  P.innerHTML = text;
+  P.className = 'battle-dialog';
+  battleDialogCtr.appendChild(P);
+}
+export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog };
