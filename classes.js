@@ -261,7 +261,17 @@ class CharacterBattle extends Character {
     this.drawHeight = this.canvas.width * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO);
     this.image.onload = () => {
       this._handleImageOnLoad();
+      this.hp = new Hp({
+        canvasContent: this.c,
+        position: {
+          x: this.position.x, 
+          y:this.position.y - 10
+        },
+        thickness: 5,
+        width: this.drawWidth,
+        currentHp:this.data.hp});
     } 
+    
   }
   _updateImage() {
     const SRC = this.pathToImg + (this.isPlayer?this.data.image.up:this.data.image.down);
@@ -298,6 +308,7 @@ class CharacterBattle extends Character {
             :canvas.height / 4
         }
         super.draw();
+        this.hp.draw();
       }else {
         this.image.onload = () => {
           this.position = {
@@ -309,18 +320,21 @@ class CharacterBattle extends Character {
               :canvas.height / 4
           }
           super.draw();
+          this.hp.draw();
         };
       }
     }else {
       super.draw();
+      this.hp.draw();
     }
   }
-  loseHP(amount) {
-    console.log(this.data.hp);
+  loseHp(amount) {
     this.data.hp -= amount? amount : 1;
+    this.hp.loseHp(amount);
   }
-  recoverHP(amount) {
+  recoverHp(amount) {
     this.data.hp += amount? amount : 1;
+    this.hp.recoverHp(amount);
   }
   run() {
     if(trueWithRatio(this.data.rateRun)) {
@@ -330,10 +344,42 @@ class CharacterBattle extends Character {
       return false;
     }
   }
+  updateData(newData) {
+    if(super.updateData(newData)) {
+      this.hp.updateCurrentHp(newData.hp);
+      return true;
+    }
+    return false;
+  }
 }
 
 class Hp {
-  constructor() {Character}
+  constructor({canvasContent, position, thickness=5, width=15, colorBase='rgb(255,255,255)', color='rgb(0,255,0)', currentHp}) {
+    this.c = canvasContent;
+    this.position = position;
+    this.thickness = thickness;
+    this.width = width;
+    this.colorBase = colorBase;
+    this.color = color;
+    this.maxHp = currentHp;
+    this.currentHp = currentHp;
+  }
+  draw() {
+    const HP_WIDTH = Math.round(this.width * this.currentHp / this.maxHp * 10) / 10;
+    this.c.fillStyle = this.colorBase;
+    this.c.fillRect(this.position.x, this.position.y, this.width , this.thickness); // fillRect instead of rect
+    this.c.fillStyle = this.color;
+    this.c.fillRect(this.position.x, this.position.y, HP_WIDTH , this.thickness); // fillRect instead of rect
+  }
+  loseHp(amount) {
+    this.currentHp -= amount? amount : 1;
+  }
+  recoverHp(amount) {
+    this.currentHp += amount? amount : 1;
+  }
+  updateCurrentHp(currentHp) {
+    this.currentHp = currentHp || 0;
+  }
 }
 
 export { Boundary, Sprite, Character, Player, CharacterBattle};

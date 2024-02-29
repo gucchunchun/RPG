@@ -412,11 +412,10 @@ fetchJsonData('./data/gameData.json')
       const CHECKED_VALUE = getCheckedValue(INPUT_LIST);
       // 確認
       if(containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient})) {
-        ENEMY_BATTLE.loseHP();
-        console.log(ENEMY_BATTLE.data.hp);
+        ENEMY_BATTLE.loseHp();
       }else {
         console.log('lose');
-        PLAYER_BATTLE.loseHP();
+        PLAYER_BATTLE.loseHp();
       }
       removeChecked(INPUT_LIST);
     });
