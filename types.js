@@ -45,7 +45,7 @@ const ENEMY_DATA_TYPE = {
       name: '',
       ingredient: []
   },
-  rank: 1
+  hp: 1
 }
 
 export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE };

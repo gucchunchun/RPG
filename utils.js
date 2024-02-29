@@ -7,7 +7,7 @@ function rectCollision({rect1, rect2}) {
   rect1.position.y <= rect2.position.y + rect2.height);
   return RESULT;
 }
-function makeMap(array, canvas, canvasContent, offset) {
+function makeMap({array, canvas, canvasContent, offset}) {
   const ARRAY_MAP = [];
   for(let i = 0; i < array.length; i += 70) {
     ARRAY_MAP.push(array.slice(i, i + 70));
@@ -42,5 +42,53 @@ function choiceRandom(array) {
   const RESULT = array[INDEX];
   return RESULT;
 }
+function addOption({parent, childList, multiAnswer, name, classList}) {
+  const NODE_LIST = [];
+  let type = 'radio';
+  if(multiAnswer) {
+    type = 'checkbox';
+  }
+  for(let child of childList) {
+    const LABEL = document.createElement('label');
+    if(classList) {
+      LABEL.className = classList.join(' ');
+    }
+    LABEL.classList.add('option__label');
+    const SPAN = document.createElement('span');
+    SPAN.innerHTML = child;
+    LABEL.appendChild(SPAN);
+    const INPUT = document.createElement('input');
+    INPUT.id = child;
+    INPUT.name = name;
+    INPUT.type= type;
+    INPUT.value = child;
+    INPUT.classList.add('option__input');
+    LABEL.appendChild(INPUT);
+    parent.appendChild(LABEL);
+    NODE_LIST.push(INPUT);
+  }
+  return NODE_LIST;
+}
+function getCheckedValue(inputList) {
+  const VALUE = [];
+  for(let input of inputList) {
+    if(input.checked) VALUE.push(input.value);
+  }
+  return VALUE;
+}
+function removeChecked(inputList) {
+  for(let input of inputList) {
+    if(input.checked) input.checked = false;
+  }
+}
+function containsSame({list1, list2}) {
+  if(list1.length !== list2.length) return false;
+  const SORTED_LIST1 = list1.slice().sort();
+  const SORTED_LIST2 = list2.slice().sort();
+  for(let i = 0; i < SORTED_LIST1.length; i++) {
+    if(SORTED_LIST1[i] !== SORTED_LIST2[i]) return false;
+  }
+  return true;
+}
 
-export { rectCollision, makeMap, trueWithRatio, choiceRandom };
+export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked };

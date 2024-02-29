@@ -1,5 +1,5 @@
 import { fetchJsonData } from './fetchData.js';
-import { rectCollision, makeMap, trueWithRatio, choiceRandom } from './utils.js';
+import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked } from './utils.js';
 import { Boundary, Sprite, Character, Player, CharacterBattle } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
@@ -51,12 +51,12 @@ fetchJsonData('./data/gameData.json')
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
   // 衝突検出用マップ
-  const COLLISION_MAP = makeMap(COLLISION, CANVAS, C, OFFSET);
-  const PATH_MAP = makeMap(PATH, CANVAS, C, OFFSET);
-  const FOREST_MAP = makeMap(FOREST, CANVAS, C, OFFSET);
-  const ITEM_MAP = makeMap(ITEM, CANVAS, C, OFFSET);
-  const WATER_MAP = makeMap(WATER, CANVAS, C, OFFSET);
-  const NAP_MAP = makeMap(NAP, CANVAS, C, OFFSET);
+  const COLLISION_MAP = makeMap({array: COLLISION, canvas: CANVAS, canvasContent: C, offset: OFFSET});
+  const PATH_MAP = makeMap({array: PATH, canvas: CANVAS, canvasContent: C, offset: OFFSET});
+  const FOREST_MAP = makeMap({array: FOREST, canvas: CANVAS, canvasContent: C, offset: OFFSET});
+  const ITEM_MAP = makeMap({array: ITEM, canvas: CANVAS, canvasContent: C, offset: OFFSET});
+  const WATER_MAP = makeMap({array: WATER, canvas: CANVAS, canvasContent: C, offset: OFFSET});
+  const NAP_MAP = makeMap({array: NAP, canvas: CANVAS, canvasContent: C, offset: OFFSET});
 
   // 固定背景:
   const IMG_MAP = new Image();
@@ -257,7 +257,7 @@ fetchJsonData('./data/gameData.json')
       boundary.draw();
     })
   }
-  animate();
+  // animate();
   
 
   // 戦闘シーン
@@ -293,6 +293,15 @@ fetchJsonData('./data/gameData.json')
   });
   TMP_ENEMY.src = `${PATH_TO_CHAR_IMG}skeletonFront.png`;
 
+  // ***
+  const BATTLE_ACTION_FIGHT = document.getElementById('fight');
+  const BATTLE_ACTION_RUN = document.getElementById('run');
+  const BATTLE_DIALOG = document.getElementById('battleDialog');
+  const BATTLE_FIGHT_CTR = document.getElementById('battleFightCtr');
+  const COCKTAIL_NAME = document.getElementById('cocktailName');
+  const BATTLE_ITEM_CTR = document.getElementById('BattleItemCtr');
+  const SET_BATTLE_ITEM_BTN = document.getElementById('setBattleItemBtn');
+
   // 戦闘時ゲームループ
   function animateBattle() {
     const ANIMATION_ID = window.requestAnimationFrame(animateBattle);
@@ -305,6 +314,7 @@ fetchJsonData('./data/gameData.json')
     previous = CURRENT - (ELAPSED % FRAME_INTERVAL);
 
     // Update
+    // HP === 0 かどうか
 
     // Render
     BG_BATTLE.draw();
@@ -313,75 +323,89 @@ fetchJsonData('./data/gameData.json')
   }
 
   // test
-  // gsap.set('#playerCtr', {
-  //   left: "100%",
-  //   opacity: 0, 
-  // });
-  // gsap.set('#battleCtr', {
-  //   opacity: 1,
-  //   bottom: `${SPACE}px`,
-  //   duration: 1, 
-  // })
-  // handleBattleStart();
-  // animateBattle();
+  gsap.set('#playerCtr', {
+    left: "100%",
+    opacity: 0, 
+  });
+  gsap.set('#battleCtr', {
+    opacity: 1,
+    bottom: `${SPACE}px`,
+    duration: 1, 
+  })
+  handleBattleStart();
+  animateBattle();
 
   // 戦闘アニメーションの開始
   function handleBattleStart() {
 
-    gsap.to('#playerCtr', {
-      left: "100%",
-      opacity: 0, 
-    });
-    gsap.fromTo('#canvasOverlap', 
-      {scale:0, opacity: 0.5}, 
-      {
-        scale:8, 
-        opacity: 1, 
-        duration: 2, 
-        ease: "expoScale(0, 8, power1.inOut)",
-        onComplete() {
-          gsap.to('#canvasOverlap', {
-            opacity: 0,
-            duration: 1, 
-          })
-          gsap.to('#battleCtr', {
-            opacity: 1,
-            bottom: '1rem',
-            duration: 1, 
-          })
-          // 戦闘シーンアニメーション開始
-          previous = new Date().getTime();
-          PLAYER_BATTLE.updateData(PLAYER.data);
-          const LIST_ENEMY = [];
-          for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-            for(let enemy of DATA.enemy[i]) {
-              LIST_ENEMY.push(enemy);
-            }
-          }
-          const ENEMY_DATA = choiceRandom(LIST_ENEMY);
-          ENEMY_BATTLE.updateData(ENEMY_DATA);
-          animateBattle();
-        }
-    });
+    // gsap.to('#playerCtr', {
+    //   left: "100%",
+    //   opacity: 0, 
+    // });
+    // gsap.fromTo('#canvasOverlap', 
+    //   {scale:0, opacity: 0.5}, 
+    //   {
+    //     scale:8, 
+    //     opacity: 1, 
+    //     duration: 2, 
+    //     ease: "expoScale(0, 8, power1.inOut)",
+    //     onComplete() {
+    //       gsap.to('#canvasOverlap', {
+    //         opacity: 0,
+    //         duration: 1, 
+    //       })
+    //       gsap.to('#battleCtr', {
+    //         opacity: 1,
+    //         bottom: '1rem',
+    //         duration: 1, 
+    //       })
+    //       // 戦闘シーンアニメーション開始
+    //       previous = new Date().getTime();
+    //       PLAYER_BATTLE.updateData(PLAYER.data);
+    //       const LIST_ENEMY = [];
+    //       for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+    //         for(let enemy of DATA.enemy[i]) {
+    //           LIST_ENEMY.push(enemy);
+    //         }
+    //       }
+    //       const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+    //       ENEMY_BATTLE.updateData(ENEMY_DATA);
+    //       animateBattle();
+    //     }
+    // });
 
     // data must be up to date
-    
-    // PLAYER_BATTLE.updateData(PLAYER.data);
-    // const LIST_ENEMY = [];
-    // for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-    //   for(let enemy of DATA.enemy[i]) {
-    //     LIST_ENEMY.push(enemy);
-    //   }
-    // }
-    // const ENEMY_DATA = choiceRandom(LIST_ENEMY);
-    // ENEMY_BATTLE.updateData(ENEMY_DATA);
+    PLAYER_BATTLE.updateData(PLAYER.data);
+    const LIST_ENEMY = [];
+    for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+      for(let enemy of DATA.enemy[i]) {
+        LIST_ENEMY.push(enemy);
+      }
+    }
+    const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+    ENEMY_BATTLE.updateData(ENEMY_DATA);
+    COCKTAIL_NAME.innerHTML = ENEMY_DATA.cocktail.name;
+    const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item']});
+    SET_BATTLE_ITEM_BTN.addEventListener('click', () => {
+      BATTLE_FIGHT_CTR.classList.remove('active');
+      const CHECKED_VALUE = getCheckedValue(INPUT_LIST);
+      // 確認
+      if(containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient})) {
+        ENEMY_BATTLE.loseHP();
+        console.log(ENEMY_BATTLE.data.hp);
+      }else {
+        console.log('lose');
+        PLAYER_BATTLE.loseHP();
+      }
+      removeChecked(INPUT_LIST);
+    });
   }
   // 戦闘アニメーションへの終了
   function handleBattleEnd() {
     PLAYER.updateData(PLAYER_BATTLE.data);
   }
 
-  // Player Move
+  // 通常シーン要素イベント
   window.addEventListener('keydown', (e)=> {
     const TARGET_KEY = e.key;
     for(let key of Object.keys(KEYS)) {
@@ -415,6 +439,11 @@ fetchJsonData('./data/gameData.json')
       window.dispatchEvent(END_EVENT);
     });
   }
+
+  // 戦闘シーン要素イベント
+  BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
+    BATTLE_FIGHT_CTR.classList.add('active');
+  })
 
   // Save data
   let isSaved = false;

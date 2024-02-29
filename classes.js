@@ -314,6 +314,17 @@ class CharacterBattle extends Character {
       super.draw();
     }
   }
+  loseHP(amount) {
+    console.log(this.data.hp);
+    this.data.hp -= amount? amount : 1;
+  }
+  recoverHP(amount) {
+    this.data.hp += amount? amount : 1;
+  }
+}
+
+class Hp {
+  constructor() {Character}
 }
 
 export { Boundary, Sprite, Character, Player, CharacterBattle};
