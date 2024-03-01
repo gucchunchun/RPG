@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My RPG</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"
+      defer
+    ></script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -28,30 +32,42 @@
           </button>
         </div>
       </div>
-      <div id="battleCtr" class="battle__ctr">
-        <div class="battle__action__ctr">
-          <label for="fight" class="battle__action__input"
-            ><input id="fight" name="action" type="radio" />fight</label
-          >
-          <label for="signature" class="battle__action__input"
-            ><input id="signature" name="action" type="radio" />signature</label
-          >
-          <label for="item" class="battle__action__input"
-            ><input id="item" name="action" type="radio" />item</label
-          >
-          <label for="run" class="battle__action__input"
-            ><input id="run" name="action" type="radio" />run</label
-          >
-        </div>
-        <div id="battleDialog" class="battle__action__dialog">
-          dialog message
-        </div>
+      <div id="battleMsgBox" class="battleMsg__box">
+        <p id="battleMsg" class="battleMsg"></p>
       </div>
-      <div id="battleActionOption" class="battle__action__option__ctr"></div>
+      <div id="battleCtr" class="battle__ctr">
+        <div class="battleーaction__ctr">
+          <label for="fight" class="fz--big option__label battleーaction">
+            <span>戦う</span>
+            <input
+              id="fight"
+              name="action"
+              type="radio"
+              class="option__input battleーaction__input"
+            />
+          </label>
+          <label for="run" class="fz--big option__label battleーaction">
+            <span>逃げる</span>
+            <input
+              id="run"
+              name="action"
+              type="radio"
+              class="option__input battleーaction__input"
+            />
+          </label>
+        </div>
+        <div id="battleDialogCtr" class="battle-dialog__ctr"></div>
+      </div>
+      <div id="battleFightCtr" class="battleーfight__ctr">
+        <p class="full fz--big">
+          <span id="cocktailName"></span>を作って敵を倒そう
+        </p>
+        <div id="BattleItemCtr" class="battleーitem__ctr"></div>
+        <button id="setBattleItemBtn" class="button--set-battle-item">
+          これで戦う！
+        </button>
+      </div>
     </div>
-    <script src="./data/boundaries.js" defer></script>
-    <script src="classes.js" defer></script>
-    <script src="charactersSprites.js" defer></script>
-    <script src="index.js" defer></script>
+    <script type="module" src="index.js"></script>
   </body>
 </html>

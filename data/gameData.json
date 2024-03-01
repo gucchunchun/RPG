@@ -1,206 +1,233 @@
 {
   "data": {
-    "player": {
-      "male": {
-        "key": 0,
-        "name": 0,
-        "image": {
-          "front": "mainMFront.png",
-          "back": "mainMBack.png",
-          "right": "mainMRight.png",
-          "left": "mainMLeft.png"
-        },
-        "skill": {
-          "costStep": 20,
-          "detail": [{
-            "target": "player",
-            "change": 2
-          }],
-          "rateSuccess": 0.5,
-          "dialog": "ノリと勢いで飲み干し、逆に元気を取り戻した。"
-        },
-        "item": [
-          "gin",
-          "tonic",
-          "lime"
-        ],
-        "level": 1,
-        "step": 0,
-        "beat": 0,
-        "encounter": 0,
-        "enemy": [],
-        "lvUpCondition": {
-          "beat": 2,
-          "step": 50
-        },
-        "rateEncounter": 0.1,
-        "rateRun": 0.9,
-        "hp": 10
-      },
-      "female": {
-        "key": 1,
-        "name": 0,
-        "image": {
-          "front": "mainFFront.png",
-          "back": "mainFBack.png",
-          "right": "mainFRight.png",
-          "left": "mainFLeft.png"
-        },
-        "skill": {
-          "costStep": 20,
-          "detail": [{
-            "target": "player",
-            "change": 1
+      "player": {
+          "male": {
+              "key": 0,
+              "name": 0,
+              "image": {
+                  "down": "mainMFront.png",
+                  "up": "mainMBack.png",
+                  "right": "mainMRight.png",
+                  "left": "mainMLeft.png"
+              },
+              "skill": {
+                  "costStep": 20,
+                  "detail": [
+                      {
+                          "target": "player",
+                          "change": 2
+                      }
+                  ],
+                  "rateSuccess": 0.5,
+                  "dialog": "ノリと勢いで飲み干し、逆に元気を取り戻した。"
+              },
+              "item": [
+                  "gin",
+                  "tonic",
+                  "lime"
+              ],
+              "step": 0,
+              "beat": 0,
+              "encounter": 0,
+              "enemy": [],
+              "lv": 1,
+              "lvUpCondition": {
+                  "beat": 2,
+                  "step": 50
+              },
+              "rateEncounter": 0.5,
+              "rateRun": 0,
+              "hp": 10
           },
-          {
-            "target": "enemy",
-            "change": -1
-          }],
-          "rateSuccess": 0.7,
-          "dialog": "「お酒飲めないんです...飲んでもらえますか？」\nお酒弱い女子を演じて敵にカウンターアタック"
-        },
-        "item": [
-          "gin",
-          "tonic",
-          "lime"
-        ],
-        "level": 1,
-        "step": 0,
-        "beat": 0,
-        "encounter": 0,
-        "enemy": [],
-        "lvUpCondition": {
-          "beat": 2,
-          "step": 70
-        },
-        "rateEncounter": 0.09,
-        "rateRun": 0.5,
-        "hp": 10
+          "female": {
+              "key": 1,
+              "name": 0,
+              "image": {
+                  "down": "mainFFront.png",
+                  "up": "mainFBack.png",
+                  "right": "mainFRight.png",
+                  "left": "mainFLeft.png"
+              },
+              "skill": {
+                  "costStep": 20,
+                  "detail": [
+                      {
+                          "target": "player",
+                          "change": 1
+                      },
+                      {
+                          "target": "enemy",
+                          "change": -1
+                      }
+                  ],
+                  "rateSuccess": 0.7,
+                  "dialog": "「お酒飲めないんです...飲んでもらえますか？」\nお酒弱い女子を演じて敵にカウンターアタック"
+              },
+              "item": [
+                  "gin",
+                  "tonic",
+                  "lime"
+              ],
+              "step": 0,
+              "beat": 0,
+              "encounter": 0,
+              "enemy": [],
+              "lv": 1,
+              "lvUpCondition": {
+                  "beat": 2,
+                  "step": 70
+              },
+              "rateEncounter": 0.09,
+              "rateRun": 0.5,
+              "hp": 10
+          }
+      },
+      "enemy": {
+          "1": [
+              {
+                  "key": 3,
+                  "name": "サラリーマン",
+                  "image": {
+                      "down": "salaryFront.png"
+                  },
+                  "cocktail": {
+                      "name": "ジントニック",
+                      "ingredient": [
+                          "gin",
+                          "tonic"
+                      ]
+                  },
+                  "hp": 1
+              },
+              {
+                  "key": 4,
+                  "name": "大学生",
+                  "image": {
+                      "down": "bossy.png"
+                  },
+                  "cocktail": {
+                      "name": "ジンライム",
+                      "ingredient": [
+                          "gin",
+                          "lime"
+                      ]
+                  },
+                  "hp": 1
+              }
+          ],
+          "2": [
+              {
+                  "key": 5,
+                  "name": "近所のおばちゃん",
+                  "image": {
+                      "down": "threeBottle.png"
+                  },
+                  "cocktail": {
+                      "name": "ジンバック",
+                      "ingredient": [
+                          "gin",
+                          "ginger"
+                      ]
+                  },
+                  "hp": 1
+              },
+              {
+                  "key": 6,
+                  "name": "スナックのママ",
+                  "image": {
+                      "down": "snackFront.png"
+                  },
+                  "cocktail": {
+                      "name": "オレンジブロッサム",
+                      "ingredient": [
+                          "gin",
+                          "orange"
+                      ]
+                  },
+                  "hp": 1
+              }
+          ],
+          "3": [
+              {
+                  "key": 7,
+                  "name": "おじいちゃん",
+                  "image": {
+                      "down": "oldFront.png"
+                  },
+                  "cocktail": {
+                      "name": "ギムレット",
+                      "ingredient": [
+                          "gin",
+                          "lime",
+                          "sugar"
+                      ]
+                  },
+                  "hp": 1
+              },
+              {
+                  "key": 8,
+                  "name": "ヴァイキング",
+                  "image": {
+                      "down": "vikingFront.png"
+                  },
+                  "cocktail": {
+                      "name": "ドックスノーズ",
+                      "ingredient": [
+                          "gin",
+                          "beer"
+                      ]
+                  },
+                  "hp": 1
+              }
+          ],
+          "boss": {
+              "key": 9,
+              "name": "ジンマスター",
+              "image": {
+                  "down": "ownerFront.png"
+              },
+              "cocktail": {
+                  "name": "アラウンド・ザ・ワールド",
+                  "ingredient": [
+                      "gin",
+                      "mint",
+                      "pineapple"
+                  ]
+              },
+              "hp": 1
+          }
+      },
+      "item": {
+          "gin": {
+              "name": "ジン"
+          },
+          "tonic": {
+              "name": "トニックウォーター"
+          },
+          "lime": {
+              "name": "ライム"
+          },
+          "orange": {
+              "name": "オレンジジュース"
+          },
+          "pineapple": {
+              "name": "パイナップルジュース"
+          },
+          "ginger": {
+              "name": "ジンジャーエール"
+          },
+          "mint": {
+              "name": "ミント"
+          },
+          "beer": {
+              "name": "ビール"
+          },
+          "whisky": {
+              "name": "ウィスキー"
+          },
+          "sugar": {
+              "name": "砂糖"
+          }
       }
-    },
-    "enemy": {
-      "1": [
-        {
-          "key": 3,
-          "name": "若手サラリーマン",
-          "image": {
-            "front": "salaryFront.png"
-          },
-          "cocktail": {
-            "name": "ジントニック",
-            "ingredient": ["gin", "tonic"]
-          },
-          "rank": 1
-        },
-        {
-          "key": 4,
-          "name": "イキってる大学生",
-          "image": {
-            "front": "bossy.png"
-          },
-          "cocktail": {
-            "name": "ジンライム",
-            "ingredient": ["gin", "lime"]
-          },
-          "rank": 1
-        }
-      ],
-      "2": [
-        {
-          "key": 5,
-          "name": "近所のおばちゃん",
-          "image": {
-            "front": "threeBottle.png"
-          },
-          "cocktail": {
-            "name": "ジンバック",
-            "ingredient": ["gin", "ginger"]
-          },
-          "rank": 2
-        },
-        {
-          "key": 6,
-          "name": "スナックのママ",
-          "image": {
-            "front": "snackFront.png"
-          },
-          "cocktail": {
-            "name": "オレンジブロッサム",
-            "ingredient": ["gin", "orange"]
-          },
-          "rank": 2
-        }
-      ],
-      "3": [
-        {
-          "key": 7,
-          "name": "おじいちゃん",
-          "image": {
-            "front": "oldFront.png"
-          },
-          "cocktail": {
-            "name": "ギムレット",
-            "ingredient": ["gin", "lime", "sugar"]
-          },
-          "rank": 3
-        },
-        {
-          "key": 8,
-          "name": "ヴァイキング",
-          "image": {
-            "front": "vikingFront.png"
-          },
-          "cocktail": {
-            "name": "ドックスノーズ",
-            "ingredient": ["gin", "beer"]
-          },
-          "rank": 3
-        }
-      ],
-      "boss": {
-        "key": 9,
-          "name": "ジンマスター",
-          "image": {
-            "front": "owner.png"
-          },
-          "cocktail": {
-            "name": "アラウンド・ザ・ワールド",
-            "ingredient": ["gin", "mint", "pineapple"]
-          },
-          "rank": 4
-      }
-    },
-    "alcohol": {
-      "gin": {
-        "name": "ジン"
-      },
-      "tonic": {
-        "name": "トニックウォーター"
-      },
-      "lime": {
-        "name": "ライム"
-      },
-      "orange": {
-        "name": "オレンジジュース"
-      },
-      "pineapple": {
-        "name": "パイナップルジュース"
-      },
-      "ginger": {
-        "name": "ジンジャーエール"
-      },
-      "mint": {
-        "name": "ミント"
-      },
-      "beer": {
-        "name": "ビール"
-      },
-      "whisky": {
-        "name": "ウィスキー"
-      },
-      "sugar": {
-        "name": "砂糖"
-      }
-    }
   }
 }
