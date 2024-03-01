@@ -104,7 +104,4 @@ function scrollToBottom(elem) {
     top: SCROLL_HEIGHT - HEIGHT,
   });
 }
-function leveledUp() {
-  
-}
 export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };

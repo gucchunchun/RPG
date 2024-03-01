@@ -1,5 +1,5 @@
 import { fetchJsonData } from './fetchData.js';
-import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog } from './utils.js';
+import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
 import { Boundary, Sprite, Character, Player, CharacterBattle } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
@@ -37,8 +37,46 @@ const CANVAS_HEIGHT = 576;
 const BATTLE_CTR_HEIGHT = Math.round(CANVAS_HEIGHT * 0.3);
 const SPACE = 8;
 
-// HTML要素
-const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('button__move');
+// 通常時HTML要素
+const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('player-ctrl');
+const LV = document.getElementById('lv');
+const STEP = document.getElementById('step');
+const BEAT = document.getElementById('beat');
+const AVERAGE_ENCOUNTER = document.getElementById('averageEncounter');
+const LOG_CTR = document.getElementById('logCtr');
+
+// 通常時固定ファンクション
+function updateEnemyLog(playerData, enemyData) {
+  BEAT.innerHTML = playerData.beat;
+  const STEP_NUM = playerData.step;
+  const ENEMY_NUM = playerData.enemy.length;
+  AVERAGE_ENCOUNTER.innerHTML = ENEMY_NUM? Math.round(STEP_NUM / ENEMY_NUM * 10) / 10
+                                            : '???';
+  if(!enemyData) return;
+  const P = document.createElement('p');
+  const SPAN = document.createElement('span');
+  P.className = 'playerInfo--log';
+  P.innerHTML = `${enemyData.name}`;
+  // SPAN.innerHTML = `ランク${enemyData.rank}`;
+  // P.appendChild(SPAN);
+  LOG_CTR.appendChild(P);
+  scrollToBottom(LOG_CTR);
+}
+function updateLv(playerData) {
+  LV.innerHTML = playerData.lv;
+}
+function updateStep(playerData) {
+  STEP.innerHTML = playerData.step;
+}
+
+// 戦闘時HTML要素
+const BATTLE_ACTION_FIGHT = document.getElementById('fight');
+const BATTLE_ACTION_RUN = document.getElementById('run');
+const BATTLE_FIGHT_CTR = document.getElementById('battleFightCtr');
+const BATTLE_DIALOG_CTR = document.getElementById('battleDialogCtr');
+const COCKTAIL_NAME = document.getElementById('cocktailName');
+const BATTLE_ITEM_CTR = document.getElementById('BattleItemCtr');
+const SET_BATTLE_ITEM_BTN = document.getElementById('setBattleItemBtn');
 
 fetchJsonData('./data/gameData.json')
 .then(json=>{
@@ -105,6 +143,10 @@ fetchJsonData('./data/gameData.json')
     data: PLAYER_DATA,
     pathToImg: PATH_TO_CHAR_IMG,
   });
+
+  updateStep(PLAYER_DATA);
+  updateLv(PLAYER_DATA);
+  updateEnemyLog(PLAYER_DATA);
 
   // プレイヤーの動きに合わせて移動させるもののリスト
   const LIST_MOVABLE = [BG, FOREGROUND_OBJECT, ...COLLISION_MAP, ...PATH_MAP, ...ITEM_MAP, ...WATER_MAP, ...NAP_MAP, ...FOREST_MAP]
@@ -215,18 +257,14 @@ fetchJsonData('./data/gameData.json')
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
     if(stepped) {
-        let encountering = false;
-        // プレイヤーが道を歩いている場合: 0％
-        if(!onPath) {
-          // プレイヤーが草原を歩いている場合: 固有の出合い率
-          let ratio = PLAYER.data.rateEncounter;
-          // プレイヤーが森を歩いている場合: 固有の出合い率*2
-          if(onForest) {
-            ratio * 2;
-          }
-          encountering = trueWithRatio(ratio);
-        }
-        if(encountering) {
+      updateStep(PLAYER.data);
+      if(PLAYER.levelUp()) {
+        console.log('levelUp');
+        PLAYER.stop();
+        updateLv(PLAYER.data);
+      }else if(!onPath){
+        const RATIO = onForest? PLAYER.data.rateEncounter*2: PLAYER.data.rateEncounter;
+        if(trueWithRatio(RATIO)) {
           console.log('battle');
           PLAYER.stop();
           for(let key in KEYS) {
@@ -240,7 +278,8 @@ fetchJsonData('./data/gameData.json')
           window.cancelAnimationFrame(ANIMATION_ID);
           // 戦闘アニメーションへの変遷、開始
           handleBattleStart();
-        }
+          }
+      }
     }
 
 
@@ -338,15 +377,50 @@ fetchJsonData('./data/gameData.json')
   });
   TMP_ENEMY.src = `${PATH_TO_CHAR_IMG}skeletonFront.png`;
 
-  // 戦闘時HTML要素
-  const BATTLE_ACTION_FIGHT = document.getElementById('fight');
-  const BATTLE_ACTION_RUN = document.getElementById('run');
-  const BATTLE_FIGHT_CTR = document.getElementById('battleFightCtr');
-  const BATTLE_DIALOG_CTR = document.getElementById('battleDialogCtr');
-  const COCKTAIL_NAME = document.getElementById('cocktailName');
-  const BATTLE_ITEM_CTR = document.getElementById('BattleItemCtr');
-  const SET_BATTLE_ITEM_BTN = document.getElementById('setBattleItemBtn');
+
+  // 戦闘時ファンクション
+  function resetBattleCtr() {
+    COCKTAIL_NAME.innerHTML = '';
+    BATTLE_ITEM_CTR.innerHTML = '';
+    BATTLE_DIALOG_CTR.innerHTML = '';
+    BATTLE_ACTION_FIGHT.disabled = true;
+    BATTLE_ACTION_RUN.disabled = true;
+    PLAYER_BATTLE.succeedRun = false;
+    SET_BATTLE_ITEM_BTN.removeEventListener('click', handleSetItemBtnClick);
+  }
+  function closeBattleItemCtr() {
+    BATTLE_FIGHT_CTR.classList.remove('active');
+    removeChecked(BATTLE_FIGHT_CTR.getElementsByTagName('input'));
+    // removeChecked(INPUT_LIST);
+    BATTLE_ACTION_FIGHT.checked = false;
+    window.removeEventListener('click', handleWindowClick);
+  }
+  function handleWindowClick(e) {
+    // fightコンテナ以外のクリックで、コンテナを閉じる
+    if(e.target === BATTLE_FIGHT_CTR || e.target === BATTLE_ACTION_FIGHT || BATTLE_FIGHT_CTR.contains(e.target)) return;
+    closeBattleItemCtr();
+  }
+  function handleActionRunClick() {
+    BATTLE_ACTION_RUN.removeEventListener('click', handleActionRunClick);
+    addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
+    setTimeout(
+      ()=>{
+        BATTLE_ACTION_RUN.checked = false;
+        if(PLAYER_BATTLE.run()) {
+          addBattleDialog(BATTLE_DIALOG_CTR, '逃げることができた');
+        }else {
+          BATTLE_ACTION_RUN.disabled = true;
+          addBattleDialog(BATTLE_DIALOG_CTR, '逃げきれなかった');
+        }
+      }
+      ,1000)
+  }
   let handleSetItemBtnClick;
+  // 戦闘時要素固定イベント
+  BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
+    BATTLE_FIGHT_CTR.classList.add('active');
+    window.addEventListener('click', handleWindowClick);
+  });
 
   // 戦闘時ゲームループ
   function animateBattle() {
@@ -363,6 +437,9 @@ fetchJsonData('./data/gameData.json')
     // HP === 0 かどうかで勝敗
     if(PLAYER_BATTLE.succeedRun) {
       window.cancelAnimationFrame(ANIMATION_ID);
+      if(!PLAYER_BATTLE.updateRecords({won: false, enemy: ENEMY_BATTLE})) {
+        throw new Error('Err at updateRecords method');
+      }
       setTimeout(handleBattleEnd, 1000);
     }
     if(PLAYER_BATTLE.data.hp === 0) {
@@ -398,6 +475,7 @@ fetchJsonData('./data/gameData.json')
     }
     const ENEMY_DATA = choiceRandom(LIST_ENEMY);
     ENEMY_BATTLE.updateData(ENEMY_DATA);
+    console.log(ENEMY_DATA);
     const COCKTAIL = ENEMY_DATA.cocktail.name;
     COCKTAIL_NAME.innerHTML = COCKTAIL;
     const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item'], itemData: ITEMS_DATA});
@@ -427,7 +505,7 @@ fetchJsonData('./data/gameData.json')
     
     // 画面変遷アニメーション
     gsap.to('#playerCtr', {
-      left: "100%",
+      right: "-20%",
       opacity: 0, 
     });
     gsap.fromTo('#canvasOverlap', 
@@ -447,8 +525,8 @@ fetchJsonData('./data/gameData.json')
             bottom: `${SPACE}px`,
             duration: 1, 
             onComplete() {
-              addBattleDialog(BATTLE_DIALOG_CTR, 'バトル開始');
-              addBattleDialog(BATTLE_DIALOG_CTR, `敵は${COCKTAIL}を飲みたそうにしている`);  
+              addBattleDialog(BATTLE_DIALOG_CTR, `${ENEMY_DATA.name}が現れた`);
+              addBattleDialog(BATTLE_DIALOG_CTR, `${COCKTAIL}を飲みたそうにしている`);  
               SET_BATTLE_ITEM_BTN.addEventListener('click', handleSetItemBtnClick);
               BATTLE_ACTION_RUN.addEventListener('click', handleActionRunClick);
               BATTLE_ACTION_FIGHT.disabled = false;
@@ -463,8 +541,10 @@ fetchJsonData('./data/gameData.json')
   }
   // 戦闘アニメーションへの終了
   function handleBattleEnd() {
-    PLAYER.updateData(PLAYER_BATTLE.data);
-
+    const NEW_PLAYER_DATA = PLAYER_BATTLE.data;
+    PLAYER.updateData(NEW_PLAYER_DATA);
+    updateEnemyLog(NEW_PLAYER_DATA, ENEMY_BATTLE.data);
+    updateStep(NEW_PLAYER_DATA);
     // 画面変遷アニメーション
     gsap.to('#battleCtr', {
       opacity: 0,
@@ -485,8 +565,14 @@ fetchJsonData('./data/gameData.json')
           })
           gsap.to('#playerCtr', {
             opacity: 1,
-            left: '',
+            right: 0,
             duration: 1, 
+            onComplete() {
+              if(PLAYER.levelUp()) {
+                console.log('Level Up')
+                updateLv(PLAYER.data)
+              }
+            }
           })
           // 通常シーン開始
           previous = new Date().getTime();
@@ -494,49 +580,6 @@ fetchJsonData('./data/gameData.json')
         }
     });
   }
-
-  // 戦闘時ファンクション
-  function resetBattleCtr() {
-    COCKTAIL_NAME.innerHTML = '';
-    BATTLE_ITEM_CTR.innerHTML = '';
-    BATTLE_DIALOG_CTR.innerHTML = '';
-    BATTLE_ACTION_FIGHT.disabled = true;
-    BATTLE_ACTION_RUN.disabled = true;
-    PLAYER_BATTLE.succeedRun = false;
-    SET_BATTLE_ITEM_BTN.removeEventListener('click', handleSetItemBtnClick);
-  }
-  function closeBattleItemCtr() {
-    BATTLE_FIGHT_CTR.classList.remove('active');
-    removeChecked(BATTLE_FIGHT_CTR.getElementsByTagName('input'));
-    // removeChecked(INPUT_LIST);
-    BATTLE_ACTION_FIGHT.checked = false;
-    window.removeEventListener('click', handleWindowClick);
-  }
-  function handleWindowClick(e) {
-    // fightコンテナ以外のクリックで、コンテナを閉じる
-    if(e.target === BATTLE_FIGHT_CTR || e.target === BATTLE_ACTION_FIGHT || BATTLE_FIGHT_CTR.contains(e.target)) return;
-    closeBattleItemCtr();
-  }
-  function handleActionRunClick() {
-    BATTLE_ACTION_RUN.removeEventListener('click', handleActionRunClick);
-    addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
-    setTimeout(
-      ()=>{
-        BATTLE_ACTION_RUN.checked = false;
-        if(PLAYER_BATTLE.run(ENEMY_BATTLE)) {
-          addBattleDialog(BATTLE_DIALOG_CTR, '逃げることができた');
-        }else {
-          BATTLE_ACTION_RUN.disabled = true;
-          addBattleDialog(BATTLE_DIALOG_CTR, '逃げきれなかった');
-        }
-      }
-      ,1000)
-  }
-  // 戦闘時要素固定イベント
-  BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
-    BATTLE_FIGHT_CTR.classList.add('active');
-    window.addEventListener('click', handleWindowClick);
-  });
 
   // Save data
   let isSaved = false;

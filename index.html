@@ -16,18 +16,39 @@
       <canvas id="canvas"></canvas>
       <div id="canvasOverlap" class="canvas__overlap"></div>
       <div id="playerCtr" class="player__ctr">
-        <div id="playerInfoCtr" class="player__info__ctr"></div>
-        <div class="player_move__ctr">
-          <button id="up" class="button__move move--up">
+        <dl id="playerInfoCtr" class="player-info__ctr">
+          <div class="player-info">
+            <dt class="player-info__heading">レベル</dt>
+            <dd><span id="lv"></span></dd>
+          </div>
+          <div class="player-info">
+            <dt class="player-info__heading">総歩数</dt>
+            <dd><span id="step"></span>歩</dd>
+          </div>
+          <div class="player-info">
+            <dt class="player-info__heading">敵討伐数</dt>
+            <dd><span id="beat"></span>人</dd>
+          </div>
+          <div class="player-info">
+            <dt class="player-info__heading">敵出現平均歩数</dt>
+            <dd><span id="averageEncounter"></span>歩</dd>
+          </div>
+          <div class="player-info">
+            <dt class="player-info__heading">敵出現ログ</dt>
+            <dd id="logCtr" class="player-info--log__ctr"></dd>
+          </div>
+        </dl>
+        <div class="player-ctrl__ctr">
+          <button id="up" class="player-ctrl move--up">
             <span>up</span>
           </button>
-          <button id="left" class="button__move move--left">
+          <button id="left" class="player-ctrl move--left">
             <span>left</span>
           </button>
-          <button id="right" class="button__move move--right">
+          <button id="right" class="player-ctrl move--right">
             <span>right</span>
           </button>
-          <button id="down" class="button__move move--down">
+          <button id="down" class="player-ctrl move--down">
             <span>down</span>
           </button>
         </div>
