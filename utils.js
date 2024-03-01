@@ -42,7 +42,7 @@ function choiceRandom(array) {
   const RESULT = array[INDEX];
   return RESULT;
 }
-function addOption({parent, childList, multiAnswer, name, classList}) {
+function addOption({parent, childList, multiAnswer, name, classList, itemData}) {
   const NODE_LIST = [];
   let type = 'radio';
   if(multiAnswer) {
@@ -55,7 +55,7 @@ function addOption({parent, childList, multiAnswer, name, classList}) {
     }
     LABEL.classList.add('option__label');
     const SPAN = document.createElement('span');
-    SPAN.innerHTML = child;
+    SPAN.innerHTML = itemData? itemData[child].name : child;
     LABEL.appendChild(SPAN);
     const INPUT = document.createElement('input');
     INPUT.id = child;
@@ -95,5 +95,14 @@ function addBattleDialog(battleDialogCtr, text) {
   P.innerHTML = text;
   P.className = 'battle-dialog';
   battleDialogCtr.appendChild(P);
+  scrollToBottom(battleDialogCtr)
 }
-export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog };
+function scrollToBottom(elem) {
+  const SCROLL_HEIGHT = elem.scrollHeight;
+  const SCROLL_TOP = elem.scrollTop;
+  const HEIGHT = elem.offsetHeight;
+  elem.scrollTo({
+    top: SCROLL_HEIGHT - HEIGHT,
+  });
+}
+export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };

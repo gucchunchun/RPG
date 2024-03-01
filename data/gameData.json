@@ -36,7 +36,7 @@
                   "step": 50
               },
               "rateEncounter": 0.5,
-              "rateRun": 0.9,
+              "rateRun": 0,
               "hp": 10
           },
           "female": {
@@ -86,7 +86,7 @@
           "1": [
               {
                   "key": 3,
-                  "name": "若手サラリーマン",
+                  "name": "サラリーマン",
                   "image": {
                       "down": "salaryFront.png"
                   },
@@ -101,7 +101,7 @@
               },
               {
                   "key": 4,
-                  "name": "イキってる大学生",
+                  "name": "大学生",
                   "image": {
                       "down": "bossy.png"
                   },
@@ -129,7 +129,7 @@
                           "ginger"
                       ]
                   },
-                  "hp": 2
+                  "hp": 1
               },
               {
                   "key": 6,
@@ -144,7 +144,7 @@
                           "orange"
                       ]
                   },
-                  "hp": 2
+                  "hp": 1
               }
           ],
           "3": [
@@ -162,7 +162,7 @@
                           "sugar"
                       ]
                   },
-                  "hp": 3
+                  "hp": 1
               },
               {
                   "key": 8,
@@ -177,7 +177,7 @@
                           "beer"
                       ]
                   },
-                  "hp": 3
+                  "hp": 1
               }
           ],
           "boss": {
@@ -194,10 +194,10 @@
                       "pineapple"
                   ]
               },
-              "hp": 4
+              "hp": 1
           }
       },
-      "alcohol": {
+      "item": {
           "gin": {
               "name": "ジン"
           },

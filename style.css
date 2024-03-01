@@ -105,12 +105,19 @@ input.option__input {
 .battleーaction span {
   text-transform: uppercase;
 }
+.battleーaction:has(input:checked) {
+  border: solid 3px rgba(255, 0, 0, 0.7);
+}
+.battleーaction:has(input:disabled) {
+  background-color: rgba(30, 30, 30, 0.7);
+}
 
-.battleーdialog__ctr {
+.battle-dialog__ctr {
   display: flex;
   flex-direction: column;
   gap: var(--space);
   justify-content: flex-start;
+  overflow: scroll;
   padding: var(--space);
 }
 .battle-dialog {
@@ -145,6 +152,9 @@ input.option__input {
 .battle-item {
   background-color: rgba(255, 255, 255, 0.5);
   flex: 0 1 calc((100% - var(--space) * 4) / 5);
+}
+.battle-item:has(input:checked){
+  border: solid 3px rgba(255, 0, 0, 0.7);
 }
 .button--set-battle-item {
   height: var(--fz--big);

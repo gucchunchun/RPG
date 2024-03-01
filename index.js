@@ -58,7 +58,7 @@ fetchJsonData('./data/gameData.json')
   const WATER_MAP = makeMap({array: WATER, canvas: CANVAS, canvasContent: C, offset: OFFSET});
   const NAP_MAP = makeMap({array: NAP, canvas: CANVAS, canvasContent: C, offset: OFFSET});
 
-  // 固定背景:
+  // 固定背景
   const IMG_MAP = new Image();
   const BG = new Sprite({
     canvas: CANVAS,
@@ -263,10 +263,45 @@ fetchJsonData('./data/gameData.json')
       boundary.draw();
     })
   }
+  // 通常シーン要素イベント
+  window.addEventListener('keydown', (e)=> {
+      const TARGET_KEY = e.key;
+      for(let key in KEYS) {
+        if(key !== 'lastKey'&& key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
+          KEYS[key].pressed = true;
+          KEYS.lastKey = TARGET_KEY;
+          KEYS.pressed = true;
+        }
+      }
+  });
+  window.addEventListener('keyup', (e)=> {
+      const TARGET_KEY = e.key;
+      for(let key in KEYS) {
+        if(key !== 'lastKey' && key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
+          KEYS[key].pressed = false;
+          KEYS.pressed = false;
+        }
+      }
+  });
+  for(let button of LIST_PLAYER_MOVE_BTN) {
+      button.addEventListener('mousedown', (e)=> {
+        const START_EVENT = new KeyboardEvent('keydown', {
+          key: KEYS[e.target.id].name,
+        });
+        window.dispatchEvent(START_EVENT);
+      });
+      button.addEventListener('mouseup', (e)=> {
+        const END_EVENT = new KeyboardEvent('keyup', {
+          key: KEYS[e.target.id].name,
+        });
+        window.dispatchEvent(END_EVENT);
+      });
+  }
+
   animate();
   
 
-  // 戦闘シーン
+  // 戦闘時固定物
   const IMG_BG_BATTLE = new Image();
   const BG_BATTLE = new Sprite({
     canvas: CANVAS,
@@ -299,7 +334,7 @@ fetchJsonData('./data/gameData.json')
   });
   TMP_ENEMY.src = `${PATH_TO_CHAR_IMG}skeletonFront.png`;
 
-  // ***
+  // 戦闘時HTML要素
   const BATTLE_ACTION_FIGHT = document.getElementById('fight');
   const BATTLE_ACTION_RUN = document.getElementById('run');
   const BATTLE_FIGHT_CTR = document.getElementById('battleFightCtr');
@@ -323,12 +358,12 @@ fetchJsonData('./data/gameData.json')
     // HP === 0 かどうかで勝敗
     if(PLAYER_BATTLE.succeedRun) {
       window.cancelAnimationFrame(ANIMATION_ID);
-      addBattleDialog(BATTLE_DIALOG_CTR, '逃げることに成功した');
       setTimeout(handleBattleEnd, 1000);
     }
     if(PLAYER_BATTLE.data.hp === 0) {
       window.cancelAnimationFrame(ANIMATION_ID);
       addBattleDialog(BATTLE_DIALOG_CTR, '勇者は死んでしまった');
+      // ゲームオーバー展開
       setTimeout(handleBattleEnd, 1000);
     }
     if(ENEMY_BATTLE.data.hp === 0) {
@@ -343,22 +378,72 @@ fetchJsonData('./data/gameData.json')
     ENEMY_BATTLE.draw();
   }
 
-  // test
-  // gsap.set('#playerCtr', {
-  //   left: "100%",
-  //   opacity: 0, 
-  // });
-  // gsap.set('#battleCtr', {
-  //   opacity: 1,
-  //   bottom: `${SPACE}px`,
-  //   duration: 1, 
-  // })
-  // handleBattleStart();
-  // animateBattle();
-
   // 戦闘アニメーションの開始
   function handleBattleStart() {
-    addBattleDialog(BATTLE_DIALOG_CTR, 'バトル開始');
+    PLAYER_BATTLE.updateData(PLAYER.data);
+    const LIST_ENEMY = [];
+    for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
+      for(let enemy of DATA.enemy[i]) {
+        LIST_ENEMY.push(enemy);
+      }
+    }
+    const ENEMY_DATA = choiceRandom(LIST_ENEMY);
+    ENEMY_BATTLE.updateData(ENEMY_DATA);
+    const COCKTAIL = ENEMY_DATA.cocktail.name;
+    COCKTAIL_NAME.innerHTML = COCKTAIL;
+    const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item'], itemData: DATA.item});
+
+    // 戦闘時イベント
+    function closeBattleItemCtr() {
+      BATTLE_FIGHT_CTR.classList.remove('active');
+      removeChecked(INPUT_LIST);
+      BATTLE_ACTION_FIGHT.checked = false;
+      window.removeEventListener('click', handleWindowClick);
+    }
+    function handleWindowClick(e) {
+      // fightコンテナ以外のクリックで、コンテナを閉じる
+      if(e.target === BATTLE_FIGHT_CTR || e.target === BATTLE_ACTION_FIGHT || BATTLE_FIGHT_CTR.contains(e.target)) return;
+      closeBattleItemCtr();
+    }
+    BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
+      BATTLE_FIGHT_CTR.classList.add('active');
+      window.addEventListener('click', handleWindowClick);
+    }, )
+    SET_BATTLE_ITEM_BTN.addEventListener('click', () => {
+      BATTLE_FIGHT_CTR.classList.remove('active');
+      const CHECKED_VALUE = getCheckedValue(INPUT_LIST);
+      const CHECKED_VALUE_NAME = CHECKED_VALUE.map(value=>DATA.item[value].name);
+      addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
+      addBattleDialog(BATTLE_DIALOG_CTR, `${CHECKED_VALUE_NAME.join('、')}を混ぜた`);
+      setTimeout(() => {
+        if(containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient})) {
+          addBattleDialog(BATTLE_DIALOG_CTR, `${ENEMY_BATTLE.data.name}>こっこれは${COCKTAIL}!美味しそう`);
+          ENEMY_BATTLE.loseHp();
+        }else {
+          addBattleDialog(BATTLE_DIALOG_CTR, `${ENEMY_BATTLE.data.name}>こんなマズイもん飲めない！`);
+          addBattleDialog(BATTLE_DIALOG_CTR, `攻撃を受けHPが1減った`);
+          PLAYER_BATTLE.loseHp();
+        }
+        removeChecked(INPUT_LIST);
+      },
+      1000);
+    });
+    BATTLE_ACTION_RUN.addEventListener('click', () => {
+      addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
+      setTimeout(
+        ()=>{
+          if(PLAYER_BATTLE.run()) {
+            addBattleDialog(BATTLE_DIALOG_CTR, '逃げることができた');
+          }else {
+            BATTLE_ACTION_RUN.disabled = true;
+            BATTLE_ACTION_RUN.checked = false;
+            addBattleDialog(BATTLE_DIALOG_CTR, '逃げきれなかった');
+          }
+        }
+        ,1000)
+    }, true);
+    
+    // 画面変遷アニメーション
     gsap.to('#playerCtr', {
       left: "100%",
       opacity: 0, 
@@ -379,52 +464,15 @@ fetchJsonData('./data/gameData.json')
             opacity: 1,
             bottom: `${SPACE}px`,
             duration: 1, 
+            onComplete() {
+              addBattleDialog(BATTLE_DIALOG_CTR, 'バトル開始');
+              addBattleDialog(BATTLE_DIALOG_CTR, `敵は${COCKTAIL}を飲みたそうにしている`);  
+            }
           })
           // 戦闘シーンアニメーション開始
           previous = new Date().getTime();
-          PLAYER_BATTLE.updateData(PLAYER.data);
-          const LIST_ENEMY = [];
-          for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-            for(let enemy of DATA.enemy[i]) {
-              LIST_ENEMY.push(enemy);
-            }
-          }
-          const ENEMY_DATA = choiceRandom(LIST_ENEMY);
-          ENEMY_BATTLE.updateData(ENEMY_DATA);
           animateBattle();
         }
-    });
-
-    // data must be up to date
-    PLAYER_BATTLE.updateData(PLAYER.data);
-    const LIST_ENEMY = [];
-    for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-      for(let enemy of DATA.enemy[i]) {
-        LIST_ENEMY.push(enemy);
-      }
-    }
-    const ENEMY_DATA = choiceRandom(LIST_ENEMY);
-    ENEMY_BATTLE.updateData(ENEMY_DATA);
-    COCKTAIL_NAME.innerHTML = ENEMY_DATA.cocktail.name;
-    const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item']});
-    SET_BATTLE_ITEM_BTN.addEventListener('click', () => {
-      BATTLE_FIGHT_CTR.classList.remove('active');
-      const CHECKED_VALUE = getCheckedValue(INPUT_LIST);
-      // 確認
-      if(containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient})) {
-        ENEMY_BATTLE.loseHp();
-      }else {
-        console.log('lose');
-        PLAYER_BATTLE.loseHp();
-      }
-      removeChecked(INPUT_LIST);
-    });
-    BATTLE_ACTION_RUN.addEventListener('click', () => {
-      if(PLAYER_BATTLE.run()) {
-        console.log('run');
-      }else {
-        console.log('fail');
-      }
     });
   }
   // 戦闘アニメーションへの終了
@@ -432,6 +480,8 @@ fetchJsonData('./data/gameData.json')
     resetBattleCtr();
     PLAYER_BATTLE.succeedRun = false;
     PLAYER.updateData(PLAYER_BATTLE.data);
+
+    // 画面変遷アニメーション
     gsap.to('#battleCtr', {
       opacity: 0,
       bottom: '',
@@ -467,45 +517,6 @@ fetchJsonData('./data/gameData.json')
     BATTLE_DIALOG_CTR.innerHTML = '';
   }
 
-  // 通常シーン要素イベント
-  window.addEventListener('keydown', (e)=> {
-    const TARGET_KEY = e.key;
-    for(let key in KEYS) {
-      if(key !== 'lastKey'&& key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
-        KEYS[key].pressed = true;
-        KEYS.lastKey = TARGET_KEY;
-        KEYS.pressed = true;
-      }
-    }
-  });
-  window.addEventListener('keyup', (e)=> {
-    const TARGET_KEY = e.key;
-    for(let key in KEYS) {
-      if(key !== 'lastKey' && key !== 'pressed' && KEYS[key].name === TARGET_KEY) {
-        KEYS[key].pressed = false;
-        KEYS.pressed = false;
-      }
-    }
-  });
-  for(let button of LIST_PLAYER_MOVE_BTN) {
-    button.addEventListener('mousedown', (e)=> {
-      const START_EVENT = new KeyboardEvent('keydown', {
-        key: KEYS[e.target.id].name,
-      });
-      window.dispatchEvent(START_EVENT);
-    });
-    button.addEventListener('mouseup', (e)=> {
-      const END_EVENT = new KeyboardEvent('keyup', {
-        key: KEYS[e.target.id].name,
-      });
-      window.dispatchEvent(END_EVENT);
-    });
-  }
-
-  // 戦闘シーン要素イベント
-  BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
-    BATTLE_FIGHT_CTR.classList.add('active');
-  })
 
   // Save data
   let isSaved = false;
@@ -524,3 +535,18 @@ fetchJsonData('./data/gameData.json')
 .catch(error => {
   throw new Error(error);
 });
+
+
+
+  // test
+  // gsap.set('#playerCtr', {
+  //   left: "100%",
+  //   opacity: 0, 
+  // });
+  // gsap.set('#battleCtr', {
+  //   opacity: 1,
+  //   bottom: `${SPACE}px`,
+  //   duration: 1, 
+  // })
+  // handleBattleStart();
+  // animateBattle();
