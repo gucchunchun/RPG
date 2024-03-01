@@ -336,9 +336,30 @@ class CharacterBattle extends Character {
     this.data.hp += amount? amount : 1;
     this.hp.recoverHp(amount);
   }
-  run() {
+  updateRecords({won, enemy}) {
+    if(isNaN(this.data.encounter)) {
+      console.log('this.data.encounter is not number. It possibly does not exist');
+      return false;
+    }
+    if(!this.data.enemy) {
+      console.log('this.data.enemy does not exist');
+      return false;
+    }
+    this.data.encounter++;
+    this.data.enemy.push(enemy);
+    if(won) {
+      if(isNaN(this.data.beat)) {
+        console.log('this.data.encounter is not number. It possibly does not exist');
+        return false;
+      }
+      this.data.beat++;
+    }
+    return true;
+  }
+  run(enemy) {
     if(trueWithRatio(this.data.rateRun)) {
       this.succeedRun = true;
+      if(!this.updateRecords({won: false, enemy: enemy})) return false;
       return true;
     }else {
       return false;

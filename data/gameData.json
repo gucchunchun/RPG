@@ -36,7 +36,7 @@
                   "step": 50
               },
               "rateEncounter": 0.5,
-              "rateRun": 0,
+              "rateRun": 1,
               "hp": 10
           },
           "female": {

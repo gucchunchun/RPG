@@ -43,6 +43,10 @@ const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('button__move');
 fetchJsonData('./data/gameData.json')
 .then(json=>{
   const DATA = json.data;
+  const PLAYERS_DATA = DATA.player;
+  const ENEMIES_DATA = DATA.enemy;
+  const ITEMS_DATA = DATA.item;
+
   // Canvas
   const CANVAS = document.getElementById('canvas');
   const C = CANVAS.getContext('2d');
@@ -85,7 +89,7 @@ fetchJsonData('./data/gameData.json')
   IMG_FG_OBJ.src = './img/map/map--foreground.png';
   
   // プレイヤー決定＊
-  const PLAYER_DATA = DATA.player.male;
+  const PLAYER_DATA = PLAYERS_DATA.male;
   const PLAYER_SPRITES = {};
   for(let key of Object.keys(PLAYER_DATA.image)) {
     const IMAGE = new Image();
@@ -342,6 +346,7 @@ fetchJsonData('./data/gameData.json')
   const COCKTAIL_NAME = document.getElementById('cocktailName');
   const BATTLE_ITEM_CTR = document.getElementById('BattleItemCtr');
   const SET_BATTLE_ITEM_BTN = document.getElementById('setBattleItemBtn');
+  let handleSetItemBtnClick;
 
   // 戦闘時ゲームループ
   function animateBattle() {
@@ -369,6 +374,9 @@ fetchJsonData('./data/gameData.json')
     if(ENEMY_BATTLE.data.hp === 0) {
       window.cancelAnimationFrame(ANIMATION_ID);
       addBattleDialog(BATTLE_DIALOG_CTR, '敵は美味しいお酒に酔って眠ってしまった');
+      if(!PLAYER_BATTLE.updateRecords({won: true, enemy: ENEMY_BATTLE})) {
+        throw new Error('Err at updateRecords method');
+      }
       setTimeout(handleBattleEnd, 1000);
     }
 
@@ -384,7 +392,7 @@ fetchJsonData('./data/gameData.json')
     PLAYER_BATTLE.updateData(PLAYER.data);
     const LIST_ENEMY = [];
     for(let i = 1; i <= PLAYER_BATTLE.data.lv; i++) {
-      for(let enemy of DATA.enemy[i]) {
+      for(let enemy of ENEMIES_DATA[i]) {
         LIST_ENEMY.push(enemy);
       }
     }
@@ -392,54 +400,30 @@ fetchJsonData('./data/gameData.json')
     ENEMY_BATTLE.updateData(ENEMY_DATA);
     const COCKTAIL = ENEMY_DATA.cocktail.name;
     COCKTAIL_NAME.innerHTML = COCKTAIL;
-    const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item'], itemData: DATA.item});
+    const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item'], itemData: ITEMS_DATA});
 
     // 戦闘時イベント
-    function closeBattleItemCtr() {
-      BATTLE_FIGHT_CTR.classList.remove('active');
-      removeChecked(INPUT_LIST);
-      BATTLE_ACTION_FIGHT.checked = false;
-      window.removeEventListener('click', handleWindowClick);
-    }
-    function handleWindowClick(e) {
-      // fightコンテナ以外のクリックで、コンテナを閉じる
-      if(e.target === BATTLE_FIGHT_CTR || e.target === BATTLE_ACTION_FIGHT || BATTLE_FIGHT_CTR.contains(e.target)) return;
-      closeBattleItemCtr();
-    }
-    function handleActionRunClick() {
-      BATTLE_ACTION_RUN.removeEventListener('click', handleActionRunClick);
-      addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
-      setTimeout(
-        ()=>{
-          BATTLE_ACTION_RUN.checked = false;
-          if(PLAYER_BATTLE.run()) {
-            addBattleDialog(BATTLE_DIALOG_CTR, '逃げることができた');
-          }else {
-            BATTLE_ACTION_RUN.disabled = true;
-            addBattleDialog(BATTLE_DIALOG_CTR, '逃げきれなかった');
-          }
-        }
-        ,1000)
-    }
-    SET_BATTLE_ITEM_BTN.addEventListener('click', () => {
-      BATTLE_FIGHT_CTR.classList.remove('active');
+    handleSetItemBtnClick = () => {
       const CHECKED_VALUE = getCheckedValue(INPUT_LIST);
-      const CHECKED_VALUE_NAME = CHECKED_VALUE.map(value=>DATA.item[value].name);
+      const CHECKED_VALUE_NAME = CHECKED_VALUE.map(value=>ITEMS_DATA[value].name);
       addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
       addBattleDialog(BATTLE_DIALOG_CTR, `${CHECKED_VALUE_NAME.join('、')}を混ぜた`);
       closeBattleItemCtr();
       setTimeout(() => {
-        if(containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient})) {
-          addBattleDialog(BATTLE_DIALOG_CTR, `${ENEMY_BATTLE.data.name}>こっこれは${COCKTAIL}!美味しそう`);
+        const WON = containsSame({list1: CHECKED_VALUE, list2: ENEMY_DATA.cocktail.ingredient});
+        const MSG = WON ? `${ENEMY_BATTLE.data.name}>こっこれは${COCKTAIL}!美味しそう`
+                        : `${ENEMY_BATTLE.data.name}>こんなマズイもん飲めない！
+                            <br>攻撃を受けHPが1減った`;
+
+        if(WON) {
           ENEMY_BATTLE.loseHp();
         }else {
-          addBattleDialog(BATTLE_DIALOG_CTR, `${ENEMY_BATTLE.data.name}>こんなマズイもん飲めない！`);
-          addBattleDialog(BATTLE_DIALOG_CTR, `攻撃を受けHPが1減った`);
           PLAYER_BATTLE.loseHp();
         }
+        addBattleDialog(BATTLE_DIALOG_CTR, MSG);
       },
       1000);
-    });
+    }
     
     // 画面変遷アニメーション
     gsap.to('#playerCtr', {
@@ -465,10 +449,7 @@ fetchJsonData('./data/gameData.json')
             onComplete() {
               addBattleDialog(BATTLE_DIALOG_CTR, 'バトル開始');
               addBattleDialog(BATTLE_DIALOG_CTR, `敵は${COCKTAIL}を飲みたそうにしている`);  
-              BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
-                BATTLE_FIGHT_CTR.classList.add('active');
-                window.addEventListener('click', handleWindowClick);
-              });
+              SET_BATTLE_ITEM_BTN.addEventListener('click', handleSetItemBtnClick);
               BATTLE_ACTION_RUN.addEventListener('click', handleActionRunClick);
               BATTLE_ACTION_FIGHT.disabled = false;
               BATTLE_ACTION_RUN.disabled = false;
@@ -513,6 +494,8 @@ fetchJsonData('./data/gameData.json')
         }
     });
   }
+
+  // 戦闘時ファンクション
   function resetBattleCtr() {
     COCKTAIL_NAME.innerHTML = '';
     BATTLE_ITEM_CTR.innerHTML = '';
@@ -520,8 +503,40 @@ fetchJsonData('./data/gameData.json')
     BATTLE_ACTION_FIGHT.disabled = true;
     BATTLE_ACTION_RUN.disabled = true;
     PLAYER_BATTLE.succeedRun = false;
+    SET_BATTLE_ITEM_BTN.removeEventListener('click', handleSetItemBtnClick);
   }
-
+  function closeBattleItemCtr() {
+    BATTLE_FIGHT_CTR.classList.remove('active');
+    removeChecked(BATTLE_FIGHT_CTR.getElementsByTagName('input'));
+    // removeChecked(INPUT_LIST);
+    BATTLE_ACTION_FIGHT.checked = false;
+    window.removeEventListener('click', handleWindowClick);
+  }
+  function handleWindowClick(e) {
+    // fightコンテナ以外のクリックで、コンテナを閉じる
+    if(e.target === BATTLE_FIGHT_CTR || e.target === BATTLE_ACTION_FIGHT || BATTLE_FIGHT_CTR.contains(e.target)) return;
+    closeBattleItemCtr();
+  }
+  function handleActionRunClick() {
+    BATTLE_ACTION_RUN.removeEventListener('click', handleActionRunClick);
+    addBattleDialog(BATTLE_DIALOG_CTR, '・・・');
+    setTimeout(
+      ()=>{
+        BATTLE_ACTION_RUN.checked = false;
+        if(PLAYER_BATTLE.run(ENEMY_BATTLE)) {
+          addBattleDialog(BATTLE_DIALOG_CTR, '逃げることができた');
+        }else {
+          BATTLE_ACTION_RUN.disabled = true;
+          addBattleDialog(BATTLE_DIALOG_CTR, '逃げきれなかった');
+        }
+      }
+      ,1000)
+  }
+  // 戦闘時要素固定イベント
+  BATTLE_ACTION_FIGHT.addEventListener('click', ()=>{
+    BATTLE_FIGHT_CTR.classList.add('active');
+    window.addEventListener('click', handleWindowClick);
+  });
 
   // Save data
   let isSaved = false;
