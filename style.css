@@ -3,13 +3,13 @@
   --battle-ctr--height: 30%;
   --fz--base: 24px;
   --fz--big: 32px;
+  --fz--small: 16px;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-size: inherit;
 }
 body {
   background-color: #000;
@@ -63,16 +63,40 @@ input.option__input {
   top: 0;
   width: 20%;
 }
-.player__info__ctr {
-  height: 50%;
+
+.player-info__ctr {
+  display: flex;
+  flex-direction: column;
+  height: 70%;
+  justify-content: space-around;
   width: 100%;
 }
-.button__move {
+.player-info__heading {
+  font-size: var(--fz--small);
+  width: 100%;
+}
+.player-info--log__ctr {
+  height: calc(var(--fz--base) + var(--space)*2);
+  overflow: scroll;
+  width: 100%;
+}
+.playerInfo--log {
+  height: var(--fz--base);
+  line-height: var(--fz--base);
+  margin-block: var(--space);
+  white-space: nowrap;
+}
+
+.player-ctrl__ctr {
+  aspect-ratio: 1;
+  height: 30%;
+  margin-inline: auto;
+}
+.player-ctrl {
   height: 3rem;
   width: 3rem;
-
 }
-.button__move span {
+.player-ctrl span {
   display: none;
 }
 

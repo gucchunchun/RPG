@@ -39,13 +39,14 @@ const ENEMY_DATA_TYPE = {
   key: 0,
   name: '',
   image: {
-      front: 'salaryFront.png'
+      front: ''
   },
   cocktail: {
       name: '',
       ingredient: []
   },
-  hp: 1
+  hp: 1,
+  rank: 0
 }
 
 export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE };

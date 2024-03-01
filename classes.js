@@ -110,6 +110,7 @@ class Character extends Sprite {
     this.pathToImg = pathToImg;
   }
   _updateImage() {
+    console.log('updateImage')
     const SRC = this.pathToImg + this.data.image.down;
     const IMAGE = new Image();
     IMAGE.onload = () => {
@@ -247,6 +248,20 @@ class Player extends Character {
       const DIRECTION = {x: xChange, y: yChange};
       return DIRECTION;
   }
+  levelUp() {
+    const CONDITION = this.data.lvUpCondition;
+    if(!CONDITION) return false;
+    for(let key in CONDITION) {
+      if(this.data[key] < CONDITION[key]) return false;
+    }
+    if(!this.data.lv) return false;
+    this.data.lv++;
+    for(let key in CONDITION) {
+      CONDITION[key] *= 2;
+    }
+    console.log(this.data);
+    return true;
+  }
 }
 
 class CharacterBattle extends Character {
@@ -336,6 +351,26 @@ class CharacterBattle extends Character {
     this.data.hp += amount? amount : 1;
     this.hp.recoverHp(amount);
   }
+  updateRecords({won, enemy}) {
+    if(isNaN(this.data.encounter)) {
+      console.log('this.data.encounter is not number. It possibly does not exist');
+      return false;
+    }
+    if(!this.data.enemy) {
+      console.log('this.data.enemy does not exist');
+      return false;
+    }
+    this.data.encounter++;
+    this.data.enemy.push(enemy);
+    if(won) {
+      if(isNaN(this.data.beat)) {
+        console.log('this.data.encounter is not number. It possibly does not exist');
+        return false;
+      }
+      this.data.beat++;
+    }
+    return true;
+  }
   run() {
     if(trueWithRatio(this.data.rateRun)) {
       this.succeedRun = true;
@@ -352,7 +387,6 @@ class CharacterBattle extends Character {
     return false;
   }
 }
-
 class Hp {
   constructor({canvasContent, position, thickness=5, width=15, colorBase='rgb(255,255,255)', color='rgb(0,255,0)', currentHp}) {
     this.c = canvasContent;

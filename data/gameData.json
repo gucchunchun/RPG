@@ -33,10 +33,10 @@
               "lv": 1,
               "lvUpCondition": {
                   "beat": 2,
-                  "step": 50
+                  "step": 20
               },
-              "rateEncounter": 0.5,
-              "rateRun": 0,
+              "rateEncounter": 0.1,
+              "rateRun": 1,
               "hp": 10
           },
           "female": {
@@ -97,7 +97,8 @@
                           "tonic"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 1
               },
               {
                   "key": 4,
@@ -112,7 +113,8 @@
                           "lime"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 1
               }
           ],
           "2": [
@@ -129,7 +131,8 @@
                           "ginger"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 2
               },
               {
                   "key": 6,
@@ -144,7 +147,8 @@
                           "orange"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 2
               }
           ],
           "3": [
@@ -162,7 +166,8 @@
                           "sugar"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 3
               },
               {
                   "key": 8,
@@ -177,7 +182,8 @@
                           "beer"
                       ]
                   },
-                  "hp": 1
+                  "hp": 1,
+                  "rank": 3
               }
           ],
           "boss": {
@@ -194,7 +200,8 @@
                       "pineapple"
                   ]
               },
-              "hp": 1
+              "hp": 1,
+              "rank": 4
           }
       },
       "item": {
