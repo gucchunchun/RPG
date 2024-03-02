@@ -889,6 +889,19 @@ class MapAnimation extends Animation {
 
     if(stepped) {
       EVENT_BUS.publish(EVENT.step, {});
+      if(this.player.levelUp()) {
+        this.player.stop();
+        return;
+      }
+      if(onPath) return;
+      const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
+      if(trueWithRatio(RATIO)) {
+        console.log('battle');
+        this.player.stop();
+        this.keyEvent.lastKey = undefined;
+        // 通常アニメーション停止
+        this.stopCurrAnimation();
+      }
     }
   }
   _render() {
