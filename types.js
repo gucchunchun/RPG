@@ -49,4 +49,12 @@ const ENEMY_DATA_TYPE = {
   rank: 0
 }
 
-export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE };
+const EVENT = {
+  itemGet: 'itemGet',
+  down: 'down',
+  up: 'up',
+  left: 'left',
+  right: 'right',
+}
+
+export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };

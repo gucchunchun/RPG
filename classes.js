@@ -1,4 +1,4 @@
-import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
+import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
 
@@ -429,26 +429,30 @@ class Hp {
     this.currentHp = currentHp || 0;
   }
 }
+// コンポーネント間でイベント発火共有
+class EventBus {
+  constructor() {
+      this.events = {};
+  }
 
-class GameManager {
-  constructor({canvas, canvasContent, fps, offSet, data}) {
-    this.canvas = canvas;
-    this.c = canvasContent;
-    this.fps = fps;
-    this.frameInterval = 1000 / this.fps;
-    this.offSet = offSet;
-    this.players = data.player;
-    this.enemy = data.enemy;
-    this.item = data.item;
-    this.player = Player;
+  subscribe(event, callback) {
+      if (!this.events[event]) {
+          this.events[event] = [];
+      }
+      this.events[event].push(callback);
+  }
+
+  publish(event, data) {
+      if (this.events[event]) {
+          this.events[event].forEach(callback => {
+              callback(data);
+          });
+      }
   }
 }
+const EVENT_BUS = new EventBus();
 
-class MapGameManager extends GameManager {
-  static BG_SRC = './img/map/map.png';
-  static BG_FRAME = 2;
-  static BG_MOVING = true;
-  static FG_SRC = './img/map/map--foreground.png';
+class KeysEvent {
   static KEYS = {
     up: {
       pressed: false,
@@ -465,17 +469,144 @@ class MapGameManager extends GameManager {
     right: {
       pressed: false,
       name: 'ArrowRight',
-    },
-    pressed: false,
-    lastKey: undefined
+    }
   }
-  constructor({canvas, canvasContent, fps, offSet, data, Player, ctrlBtn: {down, up, left, right}}) {
-    super({canvas, canvasContent, fps, offSet, data})
-    this.player = Player;
+  constructor({ctrlBtn= {down, up, left, right}}) {
+    this.keys = KeysEvent.KEYS;
+    this.lastKey;
     this.ctrlBtn = ctrlBtn;
-    this.listMovable = [];
-    this.preTime;
+    window.addEventListener('keydown', (e) => {
+      const TARGET_KEY = e.key;
+      for(let direction in this.keys) {
+        const KEY = this.keys[direction];
+        if(KEY.name === TARGET_KEY) {
+          KEY.pressed = true;
+          this.lastKey = TARGET_KEY;
+        }
+      }
+    })
+    window.addEventListener('keyup', (e)=> {
+      const TARGET_KEY = e.key;
+      for(let direction in this.keys) {
+        const KEY = this.keys[direction];
+        if(KEY.name === TARGET_KEY) {
+          KEY.pressed = false;
+          if(this.lastKey === TARGET_KEY) {
+            this.lastKey = undefined;
+          }
+        }
+      }
+    });
+    for(let direction in ctrlBtn) {
+      ctrlBtn[direction].addEventListener('mousedown', (e)=> {
+        const START_EVENT = new KeyboardEvent('keydown', {
+          key: this.keys[direction].name,
+        });
+        window.dispatchEvent(START_EVENT);
+      });
+      ctrlBtn[direction].addEventListener('mouseup', (e)=> {
+        const END_EVENT = new KeyboardEvent('keyup', {
+          key: this.keys[direction].name,
+        });
+        window.dispatchEvent(END_EVENT);
+      });
+    }
+  }
+  setKeys({down, up, left, right}) {
+    this.keys[down].name = down? down: this.keys[down].name;
+    this.keys[up].name = up? up: this.keys[up].name;
+    this.keys[left].name = left? left: this.keys[left].name;
+    this.keys[right].name = right? right: this.keys[right].name;
+  }
+}
+
+
+class GameManager {
+  constructor({canvas, canvasContent, fps, offSet, data, msgTime, keyEvent}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
+    this.fps = fps;
+    this.frameInterval = 1000 / this.fps;
+    this.offSet = offSet;
+    this.data = data;
+    this.msgTime = msgTime;
+    this.keyEvent = keyEvent;
+    const PLAYER_DATA = this.data.player.male;
+    const PLAYER_SPRITES = {};
+    for(let key of Object.keys(PLAYER_DATA.image)) {
+      const IMAGE = new Image();
+      IMAGE.src = './img/character/' + PLAYER_DATA.image[key];
+      PLAYER_SPRITES[key] = IMAGE;
+    } 
+    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: PLAYER_DATA, pathToImg: './img/character/', sprite:PLAYER_SPRITES});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent});
+    EVENT_BUS.subscribe(EVENT.itemGet, this.handleItemGet.bind(this));
+  }
+  startMapAnimation() {
+    this.mapAnimation.init();
+    this.mapAnimation.animate();
+  }
+  stopMapAnimation() {
+    this.mapAnimation.stopCurrAnimation();
+  }
+  handleItemGet() {
+    stopMapAnimation();
+    setTimeout(this.mapAnimation.animate, this.msgTime);
+  }
+}
+
+class Animation {
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
+    this.fps = fps;
+    this.frameInterval = 1000 / this.fps;
+    this.offSet = offSet;
+    this.playersData = data.player;
+    this.enemiesData = data.enemy;
+    this.itemsData = data.item;
+    this.player = player;
+    this.keyEvent = keyEvent;
+    
     this.animationID;
+    this.preTime = 0;
+    this.lag = 0;
+  } 
+  animate() {
+    this.preTime = new Date().getTime();
+    this._animate();
+  } 
+  _animate() {
+
+  }
+  getLagTime() {
+    // ゲームループのスピード調整
+    // 前回の処理にによって生まれたラグを計算する。
+    const CURR_TIME = new Date().getTime();
+    const ELAPSED_TIME = CURR_TIME - this.preTime;
+    this.preTime = CURR_TIME;
+    this.lag += ELAPSED_TIME;
+  }
+  stopCurrAnimation() {
+    window.cancelAnimationFrame(this.animationID);
+  }
+}
+
+class MapAnimation extends Animation {
+  static BG_SRC = './img/map/map.png';
+  static BG_FRAME = 2;
+  static BG_MOVING = true;
+  static FG_SRC = './img/map/map--foreground.png';
+  static ITEM_INTERVAL = 3;
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
+    super({canvas, canvasContent, fps, offSet, data, player, keyEvent});
+    this.listMovable = [];
+    this.item = {
+      get: false,
+      lastItemIndex: undefined,
+      lastItemTime: 0,
+      interval: MapAnimation.ITEM_INTERVAL
+    }
     // 衝突検出用マップ
     this.boundaryMap;
     this.pathMap;
@@ -485,10 +616,8 @@ class MapGameManager extends GameManager {
     this.napMap;
     // 固定背景
     this.bg;
-    this.bgMoving = MapGameManager.BG_MOVING;
+    this.bgMoving = MapAnimation.BG_MOVING;
     this.fg;
-    // コントールキー
-    this.key = MapGameManager.KEYS;
   }
   init() {
     // 衝突検出用マップの作成
@@ -509,10 +638,10 @@ class MapGameManager extends GameManager {
         y: this.offSet.y,
       },
       image: IMG_MAP,
-      frames: {max: MapGameManager.BG_FRAME},
+      frames: {max: MapAnimation.BG_FRAME},
       moving: this.bgMoving,
     });
-    IMG_MAP.src = MapGameManager.BG_SRC;
+    IMG_MAP.src = MapAnimation.BG_SRC;
     const IMG_FG_OBJ = new Image();
     this.fg = new Sprite({
       canvas: this.canvas,
@@ -523,69 +652,32 @@ class MapGameManager extends GameManager {
       },
       image: IMG_FG_OBJ
     });
-    IMG_FG_OBJ.src = MapGameManager.FG_SRC;
+    IMG_FG_OBJ.src = MapAnimation.FG_SRC;
 
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
-
-    // イベントリスナー
-    window.addEventListener('keydown', (e)=> {
-      const TARGET_KEY = e.key;
-      for(let key in this.keys) {
-        if(key !== 'lastKey'&& key !== 'pressed' && this.keys[key].name === TARGET_KEY) {
-          this.keys[key].pressed = true;
-          this.keys.lastKey = TARGET_KEY;
-          this.keys.pressed = true;
-        }
-      }
-    });
-    window.addEventListener('keyup', (e)=> {
-        const TARGET_KEY = e.key;
-        for(let key in this.keys) {
-          if(key !== 'lastKey' && key !== 'pressed' && this.keys[key].name === TARGET_KEY) {
-            this.keys[key].pressed = false;
-            this.keys.pressed = false;
-          }
-        }
-    });
-    for(let direction in this.ctrlBtn) {
-      this.ctrlBtn[direction].addEventListener('mousedown', (e)=> {
-        const START_EVENT = new KeyboardEvent('keydown', {
-          key: this.keys[direction].name,
-        });
-        window.dispatchEvent(START_EVENT);
-      });
-      this.ctrlBtn[direction].addEventListener('mouseup', (e)=> {
-        const END_EVENT = new KeyboardEvent('keyup', {
-          key: this.keys[direction].name,
-        });
-        window.dispatchEvent(END_EVENT);
-      });
-    }
   }
-  animate() {
-    this.preTime = new Date().getTime();
-    this._animate();
-  } 
   _animate() {
-    // ゲームループのスピード調整
-    // （歩くスピード調節ができるようにするため）
-    this.animationID = window.requestAnimationFrame(this._animate);
-    const CURR_TIME = new Date().getTime();
-    const ELAPSED_TIME = CURR_TIME - this.preTime;
-    if(!(this.frameInterval <= ELAPSED)) return;
-    this.preTime = CURR_TIME - (ELAPSED % this.frameInterval);
+    this.animationID = window.requestAnimationFrame(this._animate.bind(this));
+    super.getLagTime();
+    while(this.frameInterval <= this.lag) {
+      this._update();
+      this.lag -= this.frameInterval;
+    }
 
+    this._render();
+  }
+  _update() {
     // アニメーションのアップデート
     let stepped = false;
     // プレイヤーが一歩歩き終わっていない時：
     if(this.player.moving && 0 < this.player.moved && this.player.moved < this.player.stepMove) {
-      const NEXT_DIRECTION = this.player.getNextStepDirection();
+      const NEXT_MOVE = this.player.getNextStepDirection();
       let colliding = false;
       for(let i = 0; i < this.boundaryMap.length; i++) {
         const BOUNDARY = this.boundaryMap[i];
-        const X = Math.round((BOUNDARY.position.x - NEXT_DIRECTION.x) * 10)/10;
-        const Y = Math.round((BOUNDARY.position.y - NEXT_DIRECTION.y) * 10)/10;
+        const X = Math.round((BOUNDARY.position.x - NEXT_MOVE.x) * 10)/10;
+        const Y = Math.round((BOUNDARY.position.y - NEXT_MOVE.y) * 10)/10;
         if(this.player.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
           colliding = true;
           break;
@@ -598,33 +690,38 @@ class MapGameManager extends GameManager {
       // 歩ける場合：
       else {
         this.listMovable.forEach((movable) => {
-          movable.updatePositionBy({x: -NEXT_DIRECTION.x, y: -NEXT_DIRECTION.y});
+          movable.updatePositionBy({x: -NEXT_MOVE.x, y: -NEXT_MOVE.y});
         })
         this.player.move();
         // 一歩の距離以上を歩いていたら
         if(this.player.stepMove <= this.player.moved) {
           stepped = true;
-          PLAYER.step();
+          this.player.step();
         }
       }
     }
     //  歩行を開始する時：
-    else if(this.keys.pressed) {
-      if(this.keys.down.pressed && this.keys.lastKey == this.keys.down.name) {
-        this.player.changeStateTo(CHARACTER_STATE.down);
-      }else if(this.keys.up.pressed && this.keys.lastKey == this.keys.up.name) {
-        this.player.changeStateTo(CHARACTER_STATE.up);
-      }else if(this.keys.left.pressed && this.keys.lastKey == this.keys.left.name) {
-        this.player.changeStateTo(CHARACTER_STATE.left);
-      }else if(this.keys.right.pressed && this.keys.lastKey == this.keys.right.name) {
-        this.player.changeStateTo(CHARACTER_STATE.right);
-      };
+    else if(this.keyEvent.lastKey) {
+      switch(this.keyEvent.lastKey) {
+        case KeysEvent.KEYS.down.name:
+          this.player.changeStateTo(CHARACTER_STATE.down);
+          break;
+        case KeysEvent.KEYS.up.name:
+          this.player.changeStateTo(CHARACTER_STATE.up);
+          break;
+        case KeysEvent.KEYS.left.name:
+          this.player.changeStateTo(CHARACTER_STATE.left);
+          break;
+        case KeysEvent.KEYS.right.name:
+          this.player.changeStateTo(CHARACTER_STATE.right);
+          break;
+      }
       let colliding = false;
       const NEXT_MOVE = this.player.getNextStepDirection();
       for(let i = 0; i < this.boundaryMap.length; i++) {
         const BOUNDARY = this.boundaryMap[i];
-        const X = Math.round((this.boundaryMap.position.x - NEXT_MOVE.x) * 10)/10;
-        const Y = Math.round((this.boundaryMap.position.y - NEXT_MOVE.y) * 10)/10;
+        const X = Math.round((BOUNDARY.position.x - NEXT_MOVE.x) * 10)/10;
+        const Y = Math.round((BOUNDARY.position.y - NEXT_MOVE.y) * 10)/10;
         if(this.player.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
           colliding = true;
           break;
@@ -637,7 +734,7 @@ class MapGameManager extends GameManager {
       // 歩ける場合：
       else {
         this.listMovable.forEach((movable) => {
-          movable.updatePositionBy({x: -NEXT_DIRECTION.x, y: -NEXT_DIRECTION.y});
+          movable.updatePositionBy({x: -NEXT_MOVE.x, y: -NEXT_MOVE.y});
         })
         this.player.move();
       }
@@ -672,10 +769,60 @@ class MapGameManager extends GameManager {
       this.player.changeVelocity(2.4);
     }
 
+    // アイテムゲット
+    // if(this.item.lastItemTime <= (this.item.lastItemTime - CURR_TIME)) {
+    //   for(let i = 0; i < this.itemMap.length; i++) {
+    //     const BOUNDARY = this.itemMap[i];
+    //     // 連続したアイテムゲットを防ぐ
+    //     if(this.item.lastItemIndex - 3 <= i && i < this.item.lastItemIndex + 3) {
+    //       continue;
+    //     }
+    //     if(this.player.isColliding(BOUNDARY)) {
+    //       const LIST_ITEM = [];
+    //       for(let key in this.itemsData) {
+    //         if(this.itemsData[key].lv !== 0 &&  this.itemsData[key].lv <= this.player.data.lv) {
+    //           this.itemsData.push(key);
+    //         }
+    //       }
+    //       const ITEM = choiceRandom(LIST_ITEM);
+    //       if(this.player.addItem(ITEM)) {
+    //         // showMsg(`${ITEM}をゲットした`);
+    //         this.item.lastItemIndex = i;
+    //         this.item.get = true;
+    //         EVENT_BUS.publish(EVENT.itemGet, { item: ITEM });
+    //         return;
+    //       };
+    //     }
+    //   }
+    // }
+
     if(stepped) {
 
     }
   }
+  _render() {
+    this.bg.draw();
+    this.boundaryMap.forEach(boundary=>{
+      boundary.draw();
+    })
+    this.pathMap.forEach(boundary=>{
+      boundary.draw();
+    })
+    this.forestMap.forEach(boundary=>{
+      boundary.draw();
+    })
+    this.itemMap.forEach(boundary=>{
+      boundary.draw();
+    })
+    // this.waterMap.forEach(boundary=>{
+    //   boundary.draw();
+    // })
+    // this.napMap.forEach(boundary=>{
+    //   boundary.draw();
+    // })
+    this.player.draw();
+    this.fg.draw();
+  }
 }
 
-export { Boundary, Sprite, Character, Player, CharacterBattle};
+export { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent};
