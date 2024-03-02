@@ -1,5 +1,7 @@
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
-import { rectCollision, trueWithRatio } from './utils.js';
+import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
+import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
+
 
 class Boundary {
   static WIDTH = 48 // 12*12(TILE) * 400 (ZOOM)
@@ -152,6 +154,7 @@ class Character extends Sprite {
 
 // velocity: px / ゲーム1frame( 1000/FPS )
 class Player extends Character {
+  static stepMove = 24;
   constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, 
                 moving = false, data, pathToImg, sprite, velocity = 2.4}) 
   {
@@ -160,7 +163,7 @@ class Player extends Character {
     this.sprite = sprite;
     this.velocity = velocity;
     this.moved = 0;
-    this.stepMove = 24;
+    this.stepMove = Player.stepMove;
     this.image.onload = () => {
       this._handleImageOnLoad();
     } 
@@ -227,7 +230,7 @@ class Player extends Character {
     const IS_COLLIDING = rectCollision({rect1: this, rect2: rectangle});
     return IS_COLLIDING;
   }
-  nextStepDirection() {
+  getNextStepDirection() {
       let xChange = 0;
       let yChange = 0;
       switch (this.state) {
@@ -260,6 +263,16 @@ class Player extends Character {
       CONDITION[key] *= 2;
     }
     console.log(this.data);
+    return true;
+  }
+  addItem(item) {
+    if(!this.data.item) {
+      console.log('Player.data.item is not found');
+      return false;
+    }
+    if(this.data.item.includes(item)) return false;
+    this.data.item.push(item);
+    console.log(this.data.item)
     return true;
   }
 }
@@ -387,6 +400,7 @@ class CharacterBattle extends Character {
     return false;
   }
 }
+
 class Hp {
   constructor({canvasContent, position, thickness=5, width=15, colorBase='rgb(255,255,255)', color='rgb(0,255,0)', currentHp}) {
     this.c = canvasContent;
@@ -413,6 +427,254 @@ class Hp {
   }
   updateCurrentHp(currentHp) {
     this.currentHp = currentHp || 0;
+  }
+}
+
+class GameManager {
+  constructor({canvas, canvasContent, fps, offSet, data}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
+    this.fps = fps;
+    this.frameInterval = 1000 / this.fps;
+    this.offSet = offSet;
+    this.players = data.player;
+    this.enemy = data.enemy;
+    this.item = data.item;
+    this.player = Player;
+  }
+}
+
+class MapGameManager extends GameManager {
+  static BG_SRC = './img/map/map.png';
+  static BG_FRAME = 2;
+  static BG_MOVING = true;
+  static FG_SRC = './img/map/map--foreground.png';
+  static KEYS = {
+    up: {
+      pressed: false,
+      name: 'ArrowUp',
+    },
+    down: {
+      pressed: false,
+      name: 'ArrowDown',
+    },
+    left: {
+      pressed: false,
+      name: 'ArrowLeft',
+    },
+    right: {
+      pressed: false,
+      name: 'ArrowRight',
+    },
+    pressed: false,
+    lastKey: undefined
+  }
+  constructor({canvas, canvasContent, fps, offSet, data, Player, ctrlBtn: {down, up, left, right}}) {
+    super({canvas, canvasContent, fps, offSet, data})
+    this.player = Player;
+    this.ctrlBtn = ctrlBtn;
+    this.listMovable = [];
+    this.preTime;
+    this.animationID;
+    // 衝突検出用マップ
+    this.boundaryMap;
+    this.pathMap;
+    this.forestMap;
+    this.itemMap;
+    this.waterMap;
+    this.napMap;
+    // 固定背景
+    this.bg;
+    this.bgMoving = MapGameManager.BG_MOVING;
+    this.fg;
+    // コントールキー
+    this.key = MapGameManager.KEYS;
+  }
+  init() {
+    // 衝突検出用マップの作成
+    this.boundaryMap = makeMap({array: COLLISION, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.pathMap = makeMap({array: PATH, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.forestMap = makeMap({array: FOREST, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.itemMap = makeMap({array: ITEM, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.waterMap = makeMap({array: WATER, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.napMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+
+    // 固定背景の作成
+    const IMG_MAP = new Image();
+    this.bg = new Sprite({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      position: {
+        x: this.offSet.x,
+        y: this.offSet.y,
+      },
+      image: IMG_MAP,
+      frames: {max: MapGameManager.BG_FRAME},
+      moving: this.bgMoving,
+    });
+    IMG_MAP.src = MapGameManager.BG_SRC;
+    const IMG_FG_OBJ = new Image();
+    this.fg = new Sprite({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      position: {
+        x: this.offSet.x,
+        y: this.offSet.y,
+      },
+      image: IMG_FG_OBJ
+    });
+    IMG_FG_OBJ.src = MapGameManager.FG_SRC;
+
+    // プレイヤーの動きに合わせて動かす物
+    this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
+
+    // イベントリスナー
+    window.addEventListener('keydown', (e)=> {
+      const TARGET_KEY = e.key;
+      for(let key in this.keys) {
+        if(key !== 'lastKey'&& key !== 'pressed' && this.keys[key].name === TARGET_KEY) {
+          this.keys[key].pressed = true;
+          this.keys.lastKey = TARGET_KEY;
+          this.keys.pressed = true;
+        }
+      }
+    });
+    window.addEventListener('keyup', (e)=> {
+        const TARGET_KEY = e.key;
+        for(let key in this.keys) {
+          if(key !== 'lastKey' && key !== 'pressed' && this.keys[key].name === TARGET_KEY) {
+            this.keys[key].pressed = false;
+            this.keys.pressed = false;
+          }
+        }
+    });
+    for(let direction in this.ctrlBtn) {
+      this.ctrlBtn[direction].addEventListener('mousedown', (e)=> {
+        const START_EVENT = new KeyboardEvent('keydown', {
+          key: this.keys[direction].name,
+        });
+        window.dispatchEvent(START_EVENT);
+      });
+      this.ctrlBtn[direction].addEventListener('mouseup', (e)=> {
+        const END_EVENT = new KeyboardEvent('keyup', {
+          key: this.keys[direction].name,
+        });
+        window.dispatchEvent(END_EVENT);
+      });
+    }
+  }
+  animate() {
+    this.preTime = new Date().getTime();
+    this._animate();
+  } 
+  _animate() {
+    // ゲームループのスピード調整
+    // （歩くスピード調節ができるようにするため）
+    this.animationID = window.requestAnimationFrame(this._animate);
+    const CURR_TIME = new Date().getTime();
+    const ELAPSED_TIME = CURR_TIME - this.preTime;
+    if(!(this.frameInterval <= ELAPSED)) return;
+    this.preTime = CURR_TIME - (ELAPSED % this.frameInterval);
+
+    // アニメーションのアップデート
+    let stepped = false;
+    // プレイヤーが一歩歩き終わっていない時：
+    if(this.player.moving && 0 < this.player.moved && this.player.moved < this.player.stepMove) {
+      const NEXT_DIRECTION = this.player.getNextStepDirection();
+      let colliding = false;
+      for(let i = 0; i < this.boundaryMap.length; i++) {
+        const BOUNDARY = this.boundaryMap[i];
+        const X = Math.round((BOUNDARY.position.x - NEXT_DIRECTION.x) * 10)/10;
+        const Y = Math.round((BOUNDARY.position.y - NEXT_DIRECTION.y) * 10)/10;
+        if(this.player.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
+          colliding = true;
+          break;
+        }
+      }
+      // 歩ける範囲にいない場合：
+      if(colliding) {
+        this.player.stop();
+      }
+      // 歩ける場合：
+      else {
+        this.listMovable.forEach((movable) => {
+          movable.updatePositionBy({x: -NEXT_DIRECTION.x, y: -NEXT_DIRECTION.y});
+        })
+        this.player.move();
+        // 一歩の距離以上を歩いていたら
+        if(this.player.stepMove <= this.player.moved) {
+          stepped = true;
+          PLAYER.step();
+        }
+      }
+    }
+    //  歩行を開始する時：
+    else if(this.keys.pressed) {
+      if(this.keys.down.pressed && this.keys.lastKey == this.keys.down.name) {
+        this.player.changeStateTo(CHARACTER_STATE.down);
+      }else if(this.keys.up.pressed && this.keys.lastKey == this.keys.up.name) {
+        this.player.changeStateTo(CHARACTER_STATE.up);
+      }else if(this.keys.left.pressed && this.keys.lastKey == this.keys.left.name) {
+        this.player.changeStateTo(CHARACTER_STATE.left);
+      }else if(this.keys.right.pressed && this.keys.lastKey == this.keys.right.name) {
+        this.player.changeStateTo(CHARACTER_STATE.right);
+      };
+      let colliding = false;
+      const NEXT_MOVE = this.player.getNextStepDirection();
+      for(let i = 0; i < this.boundaryMap.length; i++) {
+        const BOUNDARY = this.boundaryMap[i];
+        const X = Math.round((this.boundaryMap.position.x - NEXT_MOVE.x) * 10)/10;
+        const Y = Math.round((this.boundaryMap.position.y - NEXT_MOVE.y) * 10)/10;
+        if(this.player.isColliding({...BOUNDARY, position: {x: X, y: Y}})) {
+          colliding = true;
+          break;
+        }
+      }
+      // 歩ける範囲にいない場合：
+      if(colliding) {
+        this.player.stop();
+      }
+      // 歩ける場合：
+      else {
+        this.listMovable.forEach((movable) => {
+          movable.updatePositionBy({x: -NEXT_DIRECTION.x, y: -NEXT_DIRECTION.y});
+        })
+        this.player.move();
+      }
+    }
+    //  キーボード/ボタンが押されていない場合＝プレイヤー停止
+    else {
+      this.player.stop();
+    }
+
+    let onPath = false;
+    let onForest = false;
+    //  プレイヤーが道を歩いている場合：1歩 ＝ 4px * 6frames 早歩き
+    for(let i = 0; i < this.pathMap.length; i++) {
+      const BOUNDARY = this.pathMap[i];
+      if(this.player.isColliding(BOUNDARY)) {
+        onPath = true;
+        this.player.changeVelocity(4);
+        break;
+      }
+    }
+    //  プレイヤーが森を歩いている場合：1歩 ＝ 1px * 12frames　ゆっくり
+    for(let i = 0; i < this.forestMap.length; i++) {
+      const BOUNDARY = this.forestMap[i];
+      if(this.player.isColliding(BOUNDARY)) {
+        onForest = true;
+        this.player.changeVelocity(1);
+        break;
+      }
+    }
+    //  プレイヤーが草原を歩いている場合：1歩 ＝ 2.4px * 5frames　デフォルト
+    if(!onPath && !onForest) {
+      this.player.changeVelocity(2.4);
+    }
+
+    if(stepped) {
+
+    }
   }
 }
 

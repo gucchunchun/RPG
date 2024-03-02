@@ -5,7 +5,7 @@ import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
 
 // グローバル設定
-const FPS = 60; // 1フレームあたり 1000/60 millisecond
+const FPS = 30; // 1フレームあたり 1000/30 millisecond
 const FRAME_INTERVAL = 1000 / FPS;
 const OFFSET = {
   x: -1880,
@@ -44,6 +44,7 @@ const STEP = document.getElementById('step');
 const BEAT = document.getElementById('beat');
 const AVERAGE_ENCOUNTER = document.getElementById('averageEncounter');
 const LOG_CTR = document.getElementById('logCtr');
+const FULL_MSG = document.getElementById('fullMsg');
 
 // 通常時固定ファンクション
 function updateEnemyLog(playerData, enemyData) {
@@ -68,6 +69,19 @@ function updateLv(playerData) {
 function updateStep(playerData) {
   STEP.innerHTML = playerData.step;
 }
+function showMsg(msg) {
+  FULL_MSG.innerHTML = msg;
+  gsap.timeline()
+  .to('#fullMsgCtr', {
+    opacity: 1
+    }
+  )
+  .to('#fullMsgCtr', {
+    opacity: 0,
+    },
+    '+=1'
+  )
+}
 
 // 戦闘時HTML要素
 const BATTLE_ACTION_FIGHT = document.getElementById('fight');
@@ -84,6 +98,7 @@ fetchJsonData('./data/gameData.json')
   const PLAYERS_DATA = DATA.player;
   const ENEMIES_DATA = DATA.enemy;
   const ITEMS_DATA = DATA.item;
+  let lastItem;
 
   // Canvas
   const CANVAS = document.getElementById('canvas');
@@ -144,6 +159,7 @@ fetchJsonData('./data/gameData.json')
     pathToImg: PATH_TO_CHAR_IMG,
   });
 
+  //show player info
   updateStep(PLAYER_DATA);
   updateLv(PLAYER_DATA);
   updateEnemyLog(PLAYER_DATA);
@@ -168,7 +184,7 @@ fetchJsonData('./data/gameData.json')
     let stepped = false;
     //  一歩のアニメーションが終了していない場合
     if(PLAYER.moving && 0 < PLAYER.moved && PLAYER.moved < PLAYER.stepMove) {
-      const NEXT_MOVE = PLAYER.nextStepDirection();
+      const NEXT_MOVE = PLAYER.getNextStepDirection();
       let colliding = false;
       for(let i = 0; i < COLLISION_MAP.length; i++) {
         const BOUNDARY = COLLISION_MAP[i];
@@ -204,7 +220,7 @@ fetchJsonData('./data/gameData.json')
         PLAYER.changeStateTo(CHARACTER_STATE.right);
       };
       let colliding = false;
-      const NEXT_MOVE = PLAYER.nextStepDirection();
+      const NEXT_MOVE = PLAYER.getNextStepDirection();
       for(let i = 0; i < COLLISION_MAP.length; i++) {
         const BOUNDARY = COLLISION_MAP[i];
         const X = Math.round((BOUNDARY.position.x - NEXT_MOVE.x) * 10)/10;
@@ -253,6 +269,31 @@ fetchJsonData('./data/gameData.json')
     //  プレイヤーが草原を歩いている場合：1歩 ＝ 2.4px * 5frames　デフォルト
     if(!onPath && !onForest) {
       PLAYER.changeVelocity(2.4);
+    }
+
+    // アイテム
+    // if(ITEM.time < ITEM.prevTime - CURRENT) {
+
+    // }
+    for(let i = 0; i < ITEM_MAP.length; i++) {
+      const BOUNDARY = ITEM_MAP[i];
+      if(lastItem - 4 <= i && i < lastItem + 4) {
+        continue;
+      }
+      if(PLAYER.isColliding(BOUNDARY)) {
+        const LIST_ITEM = [];
+        for(let key in ITEMS_DATA) {
+          if(ITEMS_DATA[key].lv !== 0 &&  ITEMS_DATA[key].lv <= PLAYER.data.lv) {
+            LIST_ITEM.push(key);
+          }
+        }
+        const ITEM = choiceRandom(LIST_ITEM);
+        if(PLAYER.addItem(ITEM)) {
+          showMsg(`${ITEM}をゲットした`);
+          lastItem = i;
+        };
+        break;
+      }
     }
 
     // 　一歩歩くごとに敵とのエンカウントを確率に合わせて決める
@@ -475,7 +516,6 @@ fetchJsonData('./data/gameData.json')
     }
     const ENEMY_DATA = choiceRandom(LIST_ENEMY);
     ENEMY_BATTLE.updateData(ENEMY_DATA);
-    console.log(ENEMY_DATA);
     const COCKTAIL = ENEMY_DATA.cocktail.name;
     COCKTAIL_NAME.innerHTML = COCKTAIL;
     const INPUT_LIST = addOption({parent: BATTLE_ITEM_CTR, childList: PLAYER_BATTLE.data.item, multiAnswer: true, name: 'battle-item', classList: ['battle-item'], itemData: ITEMS_DATA});
