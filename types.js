@@ -51,6 +51,10 @@ const ENEMY_DATA_TYPE = {
 
 const EVENT = {
   itemGet: 'itemGet',
+  step: 'step',
+  beat: 'beat',
+  encounter: 'encounter',
+  levelUp: 'levelUp',
   down: 'down',
   up: 'up',
   left: 'left',

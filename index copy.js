@@ -1,8 +1,8 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
-import { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg } from './classes.js';
+import { UICountUp, EncounterLog, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, AverageEncounter } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
-import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
+import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { gsap } from './node_modules/gsap/index.js';
 
 // グローバル設定
@@ -40,11 +40,6 @@ const SPACE = 8;
 
 // 通常時HTML要素
 const LIST_PLAYER_MOVE_BTN = document.getElementsByClassName('player-ctrl');
-const LV = document.getElementById('lv');
-const STEP = document.getElementById('step');
-const BEAT = document.getElementById('beat');
-const AVERAGE_ENCOUNTER = document.getElementById('averageEncounter');
-const LOG_CTR = document.getElementById('logCtr');
 // const FULL_MSG = document.getElementById('fullMsg');
 
 // 通常時固定ファンクション
@@ -106,6 +101,13 @@ fetchJsonData('./data/gameData.json')
   CANVAS.width = CANVAS_WIDTH;
   CANVAS.height = CANVAS_HEIGHT;
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
+
+  const DISPLAY_LV = new UICountUp({elemID:'lv', event: EVENT.levelUp, num: 1});
+  const DISPLAY_STEP = new UICountUp({elemID: 'step', event: EVENT.step});
+  const DISPLAY_BEAT = new UICountUp({elemID: 'beat', event: EVENT.beat});
+  const DISPLAY_AVERAGE = new AverageEncounter({elemID: 'averageEncounter'});
+  const ENCOUNTER_LOG = new EncounterLog('logCtr');
+
 
   const CTRL_BTN = {};
   for(let button of LIST_PLAYER_MOVE_BTN) {

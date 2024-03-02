@@ -520,13 +520,72 @@ class KeysEvent {
   }
 }
 
-class FullMsg{
-  constructor({elemCtrID, elemID, msgTime}) {
-    this.elemCtrID = elemCtrID? elemCtrID: elemID;
+// UI
+class UI {
+  constructor({elemID}) {
     this.elemID = elemID;
     this.elem = document.getElementById(elemID);
+  }
+}
+class UICountUp extends UI {
+  constructor({elemID, event, num}) {
+    super({elemID});
+    this.num = num? num: 0;
+    if(event) {
+      EVENT_BUS.subscribe(event, this.countUp.bind(this));
+    }
+    this.elem.innerHTML = this.num;
+  }
+  countUp() {
+    this.num++;
+    this.elem.innerHTML = this.num;
+  }
+}
+class EncounterLog extends UI {
+  static CLASS = 'playerInfo--log';
+  constructor({elemID}) {
+    super({elemID});
+    EVENT_BUS.subscribe(EVENT.encounter, this.addLog.bind(this));
+  }
+  addLog({enemyData}) {
+    if(!enemyData) return;
+    const P = document.createElement('p');
+    P.className = EncounterLog.CLASS;
+    P.innerHTML = enemyData.name;
+    this.elem.append(P);
+    scrollToBottom(this.elem);
+  }
+}
+class AverageEncounter extends UICountUp {
+  constructor({elemID, num, num2}) {
+    super({elemID, num});
+    this.num2 = num2? num2: 0;
+    EVENT_BUS.subscribe(EVENT.step, this.stepped.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.encountered.bind(this));
+  }
+  show() {
+    if(this.num2 === 0) {
+      this.elem.innerHTML = '???';
+      return;
+    }
+    const AVERAGE = Math.round(this.num / this.num2 * 10)/10;
+    this.elem.innerHTML = AVERAGE;
+  }
+  stepped() {
+    this.num++;
+    this.show();
+  }
+  encountered() {
+    this.num2++;
+    this.show();
+  }
+}
+class FullMsg extends UI{
+  constructor({ elemID, elemCtrID, msgTime}) {
+    super({elemID})
+    this.elemCtrID = elemCtrID? elemCtrID: elemID;
     this.msgTime = Math.round(msgTime / 1000);
-    EVENT_BUS.subscribe(EVENT.itemGet, this.get.bind(this));
+    EVENT_BUS.subscribe(EVENT.itemGet, this.getItem.bind(this));
   }
   showMsg() {
     if(!gsap) throw new Error('Install GSAP');
@@ -541,15 +600,11 @@ class FullMsg{
       `+=${this.msgTime}`
     )
   }
-  get({item}) {
+  getItem({item}) {
     if(!item) throw new Error('this event argument does not provide item');
     this.elem.innerHTML = `${item}をゲットした`;
     this.showMsg();
   }
-}
-
-class UIManager {
-
 }
 
 class GameManager {
@@ -687,6 +742,11 @@ class MapAnimation extends Animation {
 
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
+
+    // EVENT_BUS.publish(EVENT.levelUp, {});
+    // EVENT_BUS.publish(EVENT.beat, {});
+    // EVENT_BUS.publish(EVENT.encounter, {});
+    // EVENT_BUS.publish(EVENT.step, {});
   }
   _animate() {
     this.animationID = window.requestAnimationFrame(this._animate.bind(this));
@@ -828,7 +888,7 @@ class MapAnimation extends Animation {
     }
 
     if(stepped) {
-
+      EVENT_BUS.publish(EVENT.step, {});
     }
   }
   _render() {
@@ -856,4 +916,4 @@ class MapAnimation extends Animation {
   }
 }
 
-export { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg};
+export {AverageEncounter, UICountUp,EncounterLog, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};
