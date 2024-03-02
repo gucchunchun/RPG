@@ -1,6 +1,7 @@
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
+import { gsap } from './node_modules/gsap/index.js';
 
 
 class Boundary {
@@ -272,7 +273,6 @@ class Player extends Character {
     }
     if(this.data.item.includes(item)) return false;
     this.data.item.push(item);
-    console.log(this.data.item)
     return true;
   }
 }
@@ -520,6 +520,37 @@ class KeysEvent {
   }
 }
 
+class FullMsg{
+  constructor({elemCtrID, elemID, msgTime}) {
+    this.elemCtrID = elemCtrID? elemCtrID: elemID;
+    this.elemID = elemID;
+    this.elem = document.getElementById(elemID);
+    this.msgTime = Math.round(msgTime / 1000);
+    EVENT_BUS.subscribe(EVENT.itemGet, this.get.bind(this));
+  }
+  showMsg() {
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.timeline()
+    .to(`#${this.elemCtrID}`, {
+      opacity: 1
+      }
+    )
+    .to(`#${this.elemCtrID}`, {
+      opacity: 0,
+      },
+      `+=${this.msgTime}`
+    )
+  }
+  get({item}) {
+    if(!item) throw new Error('this event argument does not provide item');
+    this.elem.innerHTML = `${item}をゲットした`;
+    this.showMsg();
+  }
+}
+
+class UIManager {
+
+}
 
 class GameManager {
   constructor({canvas, canvasContent, fps, offSet, data, msgTime, keyEvent}) {
@@ -543,15 +574,14 @@ class GameManager {
     EVENT_BUS.subscribe(EVENT.itemGet, this.handleItemGet.bind(this));
   }
   startMapAnimation() {
-    this.mapAnimation.init();
     this.mapAnimation.animate();
   }
   stopMapAnimation() {
     this.mapAnimation.stopCurrAnimation();
   }
   handleItemGet() {
-    stopMapAnimation();
-    setTimeout(this.mapAnimation.animate, this.msgTime);
+    this.stopMapAnimation();
+    setTimeout(this.startMapAnimation.bind(this), this.msgTime);
   }
 }
 
@@ -570,6 +600,7 @@ class Animation {
     
     this.animationID;
     this.preTime = 0;
+    this.currTime = 0;
     this.lag = 0;
   } 
   animate() {
@@ -577,14 +608,14 @@ class Animation {
     this._animate();
   } 
   _animate() {
-
+    
   }
   getLagTime() {
     // ゲームループのスピード調整
     // 前回の処理にによって生まれたラグを計算する。
-    const CURR_TIME = new Date().getTime();
-    const ELAPSED_TIME = CURR_TIME - this.preTime;
-    this.preTime = CURR_TIME;
+    this.currTime = new Date().getTime();
+    const ELAPSED_TIME = this.currTime - this.preTime;
+    this.preTime = this.currTime;
     this.lag += ELAPSED_TIME;
   }
   stopCurrAnimation() {
@@ -597,12 +628,11 @@ class MapAnimation extends Animation {
   static BG_FRAME = 2;
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
-  static ITEM_INTERVAL = 3;
+  static ITEM_INTERVAL = 3000;
   constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
     super({canvas, canvasContent, fps, offSet, data, player, keyEvent});
     this.listMovable = [];
     this.item = {
-      get: false,
       lastItemIndex: undefined,
       lastItemTime: 0,
       interval: MapAnimation.ITEM_INTERVAL
@@ -618,6 +648,7 @@ class MapAnimation extends Animation {
     this.bg;
     this.bgMoving = MapAnimation.BG_MOVING;
     this.fg;
+    this.init();
   }
   init() {
     // 衝突検出用マップの作成
@@ -770,31 +801,31 @@ class MapAnimation extends Animation {
     }
 
     // アイテムゲット
-    // if(this.item.lastItemTime <= (this.item.lastItemTime - CURR_TIME)) {
-    //   for(let i = 0; i < this.itemMap.length; i++) {
-    //     const BOUNDARY = this.itemMap[i];
-    //     // 連続したアイテムゲットを防ぐ
-    //     if(this.item.lastItemIndex - 3 <= i && i < this.item.lastItemIndex + 3) {
-    //       continue;
-    //     }
-    //     if(this.player.isColliding(BOUNDARY)) {
-    //       const LIST_ITEM = [];
-    //       for(let key in this.itemsData) {
-    //         if(this.itemsData[key].lv !== 0 &&  this.itemsData[key].lv <= this.player.data.lv) {
-    //           this.itemsData.push(key);
-    //         }
-    //       }
-    //       const ITEM = choiceRandom(LIST_ITEM);
-    //       if(this.player.addItem(ITEM)) {
-    //         // showMsg(`${ITEM}をゲットした`);
-    //         this.item.lastItemIndex = i;
-    //         this.item.get = true;
-    //         EVENT_BUS.publish(EVENT.itemGet, { item: ITEM });
-    //         return;
-    //       };
-    //     }
-    //   }
-    // }
+    if(this.item.lastItemTime === 0 || this.item.interval <= (this.currTime - this.item.lastItemTime)) {
+      for(let i = 0; i < this.itemMap.length; i++) {
+        const BOUNDARY = this.itemMap[i];
+        if(this.player.isColliding(BOUNDARY)) {
+          // 連続したアイテムゲットを防ぐ
+          if(this.item.lastItemIndex - 2 <= i && i < this.item.lastItemIndex + 2) {
+            break;
+          }
+          const LIST_ITEM = [];
+          for(let key in this.itemsData) {
+            if(this.itemsData[key].lv !== 0 &&  this.itemsData[key].lv <= this.player.data.lv) {
+              LIST_ITEM.push(key);
+            }
+          }
+          const ITEM = choiceRandom(LIST_ITEM);
+          if(this.player.addItem(ITEM)) {
+            this.item.lastItemTime = this.currTime;
+            this.item.lastItemIndex = i;
+            EVENT_BUS.publish(EVENT.itemGet, { item: this.itemsData[ITEM].name });
+            // showMsg(`${ITEM}をゲットした`);
+            return;
+          };
+        }
+      }
+    }
 
     if(stepped) {
 
@@ -825,4 +856,4 @@ class MapAnimation extends Animation {
   }
 }
 
-export { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent};
+export { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg};

@@ -1,8 +1,9 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
-import { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent } from './classes.js';
+import { Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "./types.js";
+import { gsap } from './node_modules/gsap/index.js';
 
 // グローバル設定
 const FPS = 30; // 1フレームあたり 1000/30 millisecond
@@ -44,7 +45,7 @@ const STEP = document.getElementById('step');
 const BEAT = document.getElementById('beat');
 const AVERAGE_ENCOUNTER = document.getElementById('averageEncounter');
 const LOG_CTR = document.getElementById('logCtr');
-const FULL_MSG = document.getElementById('fullMsg');
+// const FULL_MSG = document.getElementById('fullMsg');
 
 // 通常時固定ファンクション
 function updateEnemyLog(playerData, enemyData) {
@@ -98,6 +99,7 @@ fetchJsonData('./data/gameData.json')
   const PLAYERS_DATA = DATA.player;
   const ENEMIES_DATA = DATA.enemy;
   const ITEMS_DATA = DATA.item;
+  const MSG_TIME = 1000 //millisecond
   // Canvas
   const CANVAS = document.getElementById('canvas');
   const C = CANVAS.getContext('2d');
@@ -109,8 +111,9 @@ fetchJsonData('./data/gameData.json')
   for(let button of LIST_PLAYER_MOVE_BTN) {
     CTRL_BTN[button.id] = button;
   }
+  const FULL_MSG = new FullMsg({elemCtrID: 'fullMsgCtr', elemID: 'fullMsg', msgTime: MSG_TIME})
   const KEY_EVENT = new KeysEvent({ctrlBtn: CTRL_BTN});
-  const MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, data: DATA, msgTime: 2, keyEvent:KEY_EVENT});
+  const MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, data: DATA, msgTime: MSG_TIME, keyEvent:KEY_EVENT});
   MANAGER.startMapAnimation();
 
 })
