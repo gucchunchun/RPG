@@ -28,7 +28,6 @@
               ],
               "step": 0,
               "beat": 0,
-              "encounter": 0,
               "enemy": [],
               "lv": 1,
               "lvUpCondition": {
@@ -71,7 +70,6 @@
               ],
               "step": 0,
               "beat": 0,
-              "encounter": 0,
               "enemy": [],
               "lv": 1,
               "lvUpCondition": {

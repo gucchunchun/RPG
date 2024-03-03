@@ -544,11 +544,11 @@ fetchJsonData('./data/gameData.json')
     }
     
     // 画面変遷アニメーション
-    gsap.to('#playerCtr', {
+    gsap.to('#mapCtr', {
       right: "-20%",
       opacity: 0, 
     });
-    gsap.fromTo('#canvasOverlap', 
+    gsap.fromTo('#overlap', 
       {scale:0, opacity: 0.5}, 
       {
         scale:8, 
@@ -556,7 +556,7 @@ fetchJsonData('./data/gameData.json')
         duration: 2, 
         ease: "expoScale(0, 8, power1.inOut)",
         onComplete() {
-          gsap.to('#canvasOverlap', {
+          gsap.to('#overlap', {
             opacity: 0,
             duration: 1, 
           })
@@ -591,7 +591,7 @@ fetchJsonData('./data/gameData.json')
       bottom: '',
       duration: 1, 
     });
-    gsap.fromTo('#canvasOverlap', 
+    gsap.fromTo('#overlap', 
       {scale:0, opacity: 0.5}, 
       {
         scale:8, 
@@ -599,11 +599,11 @@ fetchJsonData('./data/gameData.json')
         duration: 2, 
         ease: "expoScale(0, 8, power1.inOut)",
         onComplete() {
-          gsap.to('#canvasOverlap', {
+          gsap.to('#overlap', {
             opacity: 0,
             duration: 1, 
           })
-          gsap.to('#playerCtr', {
+          gsap.to('#mapCtr', {
             opacity: 1,
             right: 0,
             duration: 1, 

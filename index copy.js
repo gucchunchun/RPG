@@ -1,6 +1,6 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
-import { UICountUp, EncounterLog, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, AverageEncounter } from './classes.js';
+import { Log, UICtrManager, UICount, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, AverageEncounter } from './classes.js';
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { gsap } from './node_modules/gsap/index.js';
@@ -94,7 +94,7 @@ fetchJsonData('./data/gameData.json')
   const PLAYERS_DATA = DATA.player;
   const ENEMIES_DATA = DATA.enemy;
   const ITEMS_DATA = DATA.item;
-  const MSG_TIME = 1000 //millisecond
+  const TRANSITION_TIME = 1000 //millisecond
   // Canvas
   const CANVAS = document.getElementById('canvas');
   const C = CANVAS.getContext('2d');
@@ -102,21 +102,27 @@ fetchJsonData('./data/gameData.json')
   CANVAS.height = CANVAS_HEIGHT;
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
-  const DISPLAY_LV = new UICountUp({elemID:'lv', event: EVENT.levelUp, num: 1});
-  const DISPLAY_STEP = new UICountUp({elemID: 'step', event: EVENT.step});
-  const DISPLAY_BEAT = new UICountUp({elemID: 'beat', event: EVENT.beat});
+  // map
+  const DISPLAY_LV = new UICount({elemID:'lv', countUpEvent: EVENT.levelUp, num: 1});
+  const DISPLAY_HP = new UICount({elemID: 'hp', countUpEvent: EVENT.loseHp, countDownEvent: EVENT.recoverHp});
+  const DISPLAY_STEP = new UICount({elemID: 'step', countUpEvent: EVENT.step});
+  const DISPLAY_BEAT = new UICount({elemID: 'beat', countUpEvent: EVENT.beat});
   const DISPLAY_AVERAGE = new AverageEncounter({elemID: 'averageEncounter'});
-  const ENCOUNTER_LOG = new EncounterLog('logCtr');
+  const ENCOUNTER_LOG = new Log({elemID: 'logCtr', className: 'playerInfo--log', event: EVENT.battleEnd, dataKey: 'enemy'});
+  const UI_MANAGER = new UICtrManager({overlapID: 'overlap', mapCtrID: 'mapCtr', battleCtrID: 'battleCtr', transitionTime: TRANSITION_TIME, space: SPACE});
 
+  // battle
+  const BATTLE_DIALOG = new Log({elemID: 'battleDialogCtr', className: 'battle-dialog', event: EVENT.battleDialog, clearEvent: EVENT.battleEnd});
 
   const CTRL_BTN = {};
   for(let button of LIST_PLAYER_MOVE_BTN) {
     CTRL_BTN[button.id] = button;
   }
-  const FULL_MSG = new FullMsg({elemCtrID: 'fullMsgCtr', elemID: 'fullMsg', msgTime: MSG_TIME})
+  const FULL_MSG = new FullMsg({elemCtrID: 'fullMsgCtr', elemID: 'fullMsg', transitionTime: TRANSITION_TIME})
   const KEY_EVENT = new KeysEvent({ctrlBtn: CTRL_BTN});
-  const MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, data: DATA, msgTime: MSG_TIME, keyEvent:KEY_EVENT});
+  const MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, data: DATA, transitionTime: TRANSITION_TIME, keyEvent:KEY_EVENT, pathToImg: PATH_TO_CHAR_IMG});
   MANAGER.startMapAnimation();
+  // MANAGER.startBattleAnimation();
 
 })
 // .catch(error => {

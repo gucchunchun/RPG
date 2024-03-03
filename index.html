@@ -10,12 +10,16 @@
     <h1>RPG</h1>
     <div class="canvas__ctr">
       <canvas id="canvas"></canvas>
-      <div id="canvasOverlap" class="canvas-overlap"></div>
-      <div id="playerCtr" class="player__ctr">
+      <div id="overlap" class="overlap"></div>
+      <div id="mapCtr" class="map-ctr">
         <dl id="playerInfoCtr" class="player-info__ctr">
           <div class="player-info">
             <dt class="player-info__heading">レベル</dt>
             <dd><span id="lv"></span></dd>
+          </div>
+          <div class="player-info">
+            <dt class="player-info__heading">HP</dt>
+            <dd><span id="hp"></span></dd>
           </div>
           <div class="player-info">
             <dt class="player-info__heading">総歩数</dt>
@@ -52,7 +56,7 @@
       <div id="fullMsgCtr" class="full-msg__ctr">
         <p id="fullMsg" class="full-msg"></p>
       </div>
-      <div id="battleCtr" class="battle__ctr">
+      <div id="battleCtr" class="battle-ctr">
         <div class="battleーaction__ctr">
           <label for="fight" class="fz--big option__label battleーaction">
             <span>戦う</span>

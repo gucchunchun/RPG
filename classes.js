@@ -113,7 +113,6 @@ class Character extends Sprite {
     this.pathToImg = pathToImg;
   }
   _updateImage() {
-    console.log('updateImage')
     const SRC = this.pathToImg + this.data.image.down;
     const IMAGE = new Image();
     IMAGE.onload = () => {
@@ -315,23 +314,23 @@ class CharacterBattle extends Character {
   constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, isPlayer = true, data, pathToImg, bottom}) {
     super({canvas, canvasContent, position, image, movementDelay, frames, moving, isPlayer, data, pathToImg});
     this.isPlayer = isPlayer;
-    this.bottom = bottom;
+    this.bottom = bottom || 0;
     this.succeedRun = false;
-    this.drawWidth = this.canvas.width * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO);
-    this.drawHeight = this.canvas.width * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO);
+    this.drawWidth = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO))/ 10;
+    this.drawHeight = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO)) / 10;
+    this.hp = new Hp({
+      canvasContent: this.c,
+      position: {
+        x: 0,
+        y: 0,
+      },
+      thickness: 5,
+      width: this.drawWidth,
+      currentHp:this.data.hp,
+      maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
+    });
     this.image.onload = () => {
       this._handleImageOnLoad();
-      this.hp = new Hp({
-        canvasContent: this.c,
-        position: {
-          x: this.position.x, 
-          y:this.position.y - 10
-        },
-        thickness: 5,
-        width: this.drawWidth,
-        currentHp:this.data.hp,
-        maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
-      });
     } 
     
   }
@@ -347,16 +346,17 @@ class CharacterBattle extends Character {
   _setPositionToDefault() {
     this.position = {
       x: this.isPlayer
-        ?canvas.width / 6
-        :canvas.width * 5/6 - this.drawWidth,
+        ?Math.round(canvas.width / 6 * 10) / 10
+        :Math.round((canvas.width * 5/6 - this.drawWidth) * 10) / 10,
       y: this.isPlayer
-        ?canvas.height - this.drawHeight - this.bottom + 8
-        :canvas.height / 4
+        ?Math.round((canvas.height - this.drawHeight - this.bottom + 8) * 10) / 10
+        :Math.round(canvas.height / 4 * 10) / 10
     }
   }
   _handleImageOnLoad() {
     this._setPositionToDefault();
     super._handleImageOnLoad();
+    this.hp.updatePosition(this.position);
   }
   draw() {
     if(!this.position) {
@@ -434,7 +434,7 @@ class CharacterBattle extends Character {
   }
   updateData(newData) {
     if(super.updateData(newData)) {
-      this.hp.updateCurrentHp(newData.hp);
+      this.hp.updateCurrentHp({currHp: newData.hp, maxHp: newData.maxHp || newData.hp});
       return true;
     }
     return false;
@@ -455,9 +455,9 @@ class Hp {
   draw() {
     const HP_WIDTH = Math.round(this.width * this.currHp / this.maxHp * 10) / 10;
     this.c.fillStyle = this.colorBase;
-    this.c.fillRect(this.position.x, this.position.y, this.width , this.thickness); // fillRect instead of rect
+    this.c.fillRect(this.position.x, this.position.y - 10, this.width , this.thickness); // fillRect instead of rect
     this.c.fillStyle = this.color;
-    this.c.fillRect(this.position.x, this.position.y, HP_WIDTH , this.thickness); // fillRect instead of rect
+    this.c.fillRect(this.position.x, this.position.y - 10, HP_WIDTH , this.thickness); // fillRect instead of rect
   }
   loseHp(amount) {
     amount = amount? amount : 1;
@@ -491,8 +491,12 @@ class Hp {
     const RETURN = { ok: true, amount: amount, hp: this.currHp}
     return RETURN;   
   }
-  updateCurrentHp(currentHp) {
-    this.currHp = currentHp || 0;
+  updatePosition(position) {
+    this.position = position;
+  }
+  updateCurrentHp({currHp, maxHp}) {
+    this.currHp = currHp || this.currHp;
+    this.maxHp = maxHp || this.maxHp;
   }
 }
 
@@ -594,64 +598,114 @@ class UI {
     this.elem = document.getElementById(elemID);
   }
 }
-class UICountUp extends UI {
-  constructor({elemID, event, num}) {
+class UICount extends UI {
+  constructor({elemID, countUpEvent, countDownEvent, num}) {
     super({elemID});
     this.num = num? num: 0;
-    if(event) {
-      EVENT_BUS.subscribe(event, this.countUp.bind(this));
+    if(countUpEvent) {
+      EVENT_BUS.subscribe(countUpEvent, this.countUp.bind(this));
     }
+    if(countDownEvent) {
+      EVENT_BUS.subscribe(countUpEvent, this.countUp.bind(this));
+    }
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
+    this.elem.innerHTML = this.num;
+  }
+  _showNum() {
     this.elem.innerHTML = this.num;
   }
   countUp() {
     this.num++;
-    this.elem.innerHTML = this.num;
+    this._showNum();
+  }
+  countDown() {
+    this.num--;
+    this._showNum();
+  }
+  setNum({playerData}) {
+    if(!Object.keys(playerData).includes(this.elemID)) {
+      console.log(`check ID name ${this.elemID}`);
+      return false;
+    }
+    this.num = playerData[this.elemID];
+    this._showNum();
+    return true;
   }
 }
-class EncounterLog extends UI {
-  static CLASS = 'playerInfo--log';
-  constructor({elemID}) {
+class Log extends UI {
+  constructor({elemID, className, event, dataKey, clearEvent}) {
     super({elemID});
-    EVENT_BUS.subscribe(EVENT.encounter, this.addLog.bind(this));
+    this.className = className;
+    this.event = event;
+    this.dataKey = dataKey;
+    EVENT_BUS.subscribe(this.event, this.addLog.bind(this));
+    if(dataKey) {
+      EVENT_BUS.subscribe(EVENT.playerSelect, this.setLog.bind(this));
+    }
+    if(clearEvent) {
+      EVENT_BUS.subscribe(clearEvent, this.clearLog.bind(this));
+    }
   }
-  addLog({enemyData}) {
-    if(!enemyData) return;
+  addLog({log, delay}) {
+    if(!log) return;
     const P = document.createElement('p');
-    P.className = EncounterLog.CLASS;
-    P.innerHTML = enemyData.name;
+    P.className = this.className;
+    P.innerHTML = log;
+    if(delay) {
+      setTimeout(()=>{
+        this.elem.append(P);
+        scrollToBottom(this.elem);
+      }, delay)
+      return;
+    }
     this.elem.append(P);
-    scrollToBottom(this.elem);
+        scrollToBottom(this.elem);
+  }
+  setLog({playerData}) {
+    for(let log of playerData[this.dataKey]) {
+      this.addLog({log: log});
+    }
+  }
+  clearLog() {
+    this.elem.innerHTML = '';
   }
 }
-class AverageEncounter extends UICountUp {
-  constructor({elemID, num, num2}) {
-    super({elemID, num});
-    this.num2 = num2? num2: 0;
+class AverageEncounter extends UI {
+  constructor({elemID, step, encounter}) {
+    super({elemID});
+    this.step = step || 0;
+    this.encounter = encounter || 0;
     EVENT_BUS.subscribe(EVENT.step, this.stepped.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.encountered.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
   }
-  show() {
-    if(this.num2 === 0) {
+  _show() {
+    if(this.encounter === 0) {
       this.elem.innerHTML = '???';
       return;
     }
-    const AVERAGE = Math.round(this.num / this.num2 * 10)/10;
+    const AVERAGE = Math.round(this.step / this.encounter * 10)/10;
     this.elem.innerHTML = AVERAGE;
   }
   stepped() {
-    this.num++;
-    this.show();
+    this.step++;
+    this._show();
   }
   encountered() {
-    this.num2++;
-    this.show();
+    this.encounter++;
+    this._show();
+  }
+  setNum({playerData}) {
+    this.num = playerData.step;
+    this.total = playerData.enemy.length;
+    this._show();
   }
 }
 class FullMsg extends UI{
-  constructor({ elemID, elemCtrID, msgTime}) {
+  constructor({ elemID, elemCtrID, transitionTime}) {
     super({elemID})
     this.elemCtrID = elemCtrID? elemCtrID: elemID;
-    this.msgTime = Math.round(msgTime / 1000);
+    this.transitionTime = Math.round(transitionTime / 1000);
     EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
     EVENT_BUS.subscribe(EVENT.drinkWater, this.drinkWater.bind(this));
     EVENT_BUS.subscribe(EVENT.takeNap, this.takeNap.bind(this));
@@ -668,7 +722,7 @@ class FullMsg extends UI{
       opacity: 0,
       duration: 0.25,
       },
-      `+=${this.msgTime - 0.5}`
+      `+=${this.transitionTime - 0.5}`
     )
   }
   getItem({item}) {
@@ -687,65 +741,127 @@ class FullMsg extends UI{
     this.showMsg();
   }
 }
+class UICtrManager {
+  constructor({overlapID, mapCtrID, battleCtrID, transitionTime, space}) {
+    this.overlapID = overlapID;
+    this.mapCtrID = mapCtrID;
+    this.battleCtrID = battleCtrID;
+    this.transitionTime = transitionTime / 1000;
+    this.space = space
+    EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.mapEnd, this.mapEnd.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleStart, this.battleStart.bind(this));
+  }
+  mapStart() {
+    gsap.to(`#${this.mapCtrID}`, 
+    {
+      right: 0,
+      opacity: 1, 
+      duration: this.transitionTime
+    });
+  }
+  mapEnd() {
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.timeline()
+    .to(`#${this.mapCtrID}`, 
+    {
+      right: '-20%',
+      opacity: 0, 
+      duration: this.transitionTime
+    })
+    .to(`#${this.overlapID}`, 
+    {
+      scale:8, 
+      opacity: 1, 
+      duration: this.transitionTime, 
+    }, 0)
+    .to(`#${this.overlapID}`, 
+    {
+      scale:8, 
+      opacity: 0, 
+      duration: this.transitionTime, 
+    })
+  }
+  battleStart() {
+    gsap.to(`#${this.battleCtrID}`, 
+    {
+      bottom: `${this.space}px`,
+      opacity: 1,
+      duration: this.transitionTime,
+    });
+  }
+}
 
 class GameManager {
-  constructor({canvas, canvasContent, fps, offSet, data, msgTime, keyEvent}) {
+  constructor({canvas, canvasContent, fps, offSet, data, transitionTime, keyEvent, pathToImg}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
     this.data = data;
-    this.msgTime = msgTime;
+    this.transitionTime = transitionTime;
     this.keyEvent = keyEvent;
-    const PLAYER_DATA = this.data.player.male;
+    this.pathToImg = pathToImg;
+    this.playerData = this.data.player.male;
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.playerData});
     const PLAYER_SPRITES = {};
-    for(let key of Object.keys(PLAYER_DATA.image)) {
+    for(let key of Object.keys(this.playerData.image)) {
       const IMAGE = new Image();
-      IMAGE.src = './img/character/' + PLAYER_DATA.image[key];
+      IMAGE.src = this.pathToImg + this.playerData.image[key];
       PLAYER_SPRITES[key] = IMAGE;
     } 
-    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: PLAYER_DATA, pathToImg: './img/character/', sprite:PLAYER_SPRITES});
-    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent});
-    EVENT_BUS.subscribe(EVENT.getItem, this.handleItemGet.bind(this));
+    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: this.playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg});
+    EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
   }
   startMapAnimation() {
     this.mapAnimation.animate();
+    EVENT_BUS.publish(EVENT.mapStart, {});
   }
   stopMapAnimation() {
     this.mapAnimation.stopCurrAnimation();
+    EVENT_BUS.publish(EVENT.mapEnd, {});
   }
-  handleItemGet() {
+  startBattleAnimation() {
+    this.battleAnimation.animate(this.playerData);
+    EVENT_BUS.publish(EVENT.battleStart, {});
+  }
+  stopBattleAnimation() {
+    this.battleAnimation.stopCurrAnimation();
+  }
+  handleEncounter() {
     this.stopMapAnimation();
-    setTimeout(this.startMapAnimation.bind(this), this.msgTime);
+    setTimeout(this.startBattleAnimation.bind(this), this.transitionTime)
+  }
+  showFullMsg() {
+    this.stopMapAnimation();
+    setTimeout(this.startMapAnimation.bind(this), this.transitionTime);
   }
 }
 
 class Animation {
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
-    this.playersData = data.player;
     this.enemiesData = data.enemy;
     this.itemsData = data.item;
     this.player = player;
     this.keyEvent = keyEvent;
+    this.pathToImg = pathToImg;
     
     this.animationID;
     this.preTime = 0;
     this.currTime = 0;
     this.lag = 0;
   } 
-  animate() {
-    this.preTime = new Date().getTime();
-    this._animate();
-  } 
-  _animate() {
-    
-  }
   getLagTime() {
     // ゲームループのスピード調整
     // 前回の処理にによって生まれたラグを計算する。
@@ -754,19 +870,38 @@ class Animation {
     this.preTime = this.currTime;
     this.lag += ELAPSED_TIME;
   }
+  animate() {
+    this.preTime = new Date().getTime();
+    this._animate();
+  } 
+  _animate() {
+    this.animationID = window.requestAnimationFrame(this._animate.bind(this));
+    this.getLagTime();
+    while(this.frameInterval <= this.lag) {
+      this._update();
+      this.lag -= this.frameInterval;
+    }
+
+    this._render();
+  }
+  _update() {
+
+  }
+  _render() {
+
+  }
   stopCurrAnimation() {
     window.cancelAnimationFrame(this.animationID);
   }
 }
-
 class MapAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
   static MAP_EVENT_INTERVAL = 3000;
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
-    super({canvas, canvasContent, fps, offSet, data, player, keyEvent});
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg}) {
+    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg});
     this.listMovable = [];
     this.item = {
       lastIndex: undefined,
@@ -806,7 +941,7 @@ class MapAnimation extends Animation {
     this.napMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
 
     // 固定背景の作成
-    const IMG_MAP = new Image();
+    const IMG_BG = new Image();
     this.bg = new Sprite({
       canvas: this.canvas,
       canvasContent: this.c,
@@ -814,11 +949,11 @@ class MapAnimation extends Animation {
         x: this.offSet.x,
         y: this.offSet.y,
       },
-      image: IMG_MAP,
+      image: IMG_BG,
       frames: {max: MapAnimation.BG_FRAME},
       moving: this.bgMoving,
     });
-    IMG_MAP.src = MapAnimation.BG_SRC;
+    IMG_BG.src = MapAnimation.BG_SRC;
     const IMG_FG_OBJ = new Image();
     this.fg = new Sprite({
       canvas: this.canvas,
@@ -838,16 +973,6 @@ class MapAnimation extends Animation {
     // EVENT_BUS.publish(EVENT.beat, {});
     // EVENT_BUS.publish(EVENT.encounter, {});
     // EVENT_BUS.publish(EVENT.step, {});
-  }
-  _animate() {
-    this.animationID = window.requestAnimationFrame(this._animate.bind(this));
-    super.getLagTime();
-    while(this.frameInterval <= this.lag) {
-      this._update();
-      this.lag -= this.frameInterval;
-    }
-
-    this._render();
   }
   _update() {
     // アニメーションのアップデート
@@ -1020,22 +1145,23 @@ class MapAnimation extends Animation {
       }
     }
 
-    // if(stepped) {
-    //   EVENT_BUS.publish(EVENT.step, {});
-    //   if(this.player.levelUp()) {
-    //     this.player.stop();
-    //     return;
-    //   }
-    //   if(onPath) return;
-    //   const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
-    //   if(trueWithRatio(RATIO)) {
-    //     console.log('battle');
-    //     this.player.stop();
-    //     this.keyEvent.lastKey = undefined;
-    //     // 通常アニメーション停止
-    //     this.stopCurrAnimation();
-    //   }
-    // }
+    if(stepped) {
+      EVENT_BUS.publish(EVENT.step, {});
+      if(this.player.levelUp()) {
+        this.player.stop();
+        return;
+      }
+      if(onPath) return;
+      const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
+      if(trueWithRatio(RATIO)) {
+        console.log('battle');
+        this.player.stop();
+        this.keyEvent.lastKey = undefined;
+        // 通常アニメーション停止
+        // this.stopCurrAnimation();
+        EVENT_BUS.publish(EVENT.encounter, {});
+      }
+    }
   }
   _render() {
     this.bg.draw();
@@ -1061,5 +1187,82 @@ class MapAnimation extends Animation {
     this.fg.draw();
   }
 }
+class BattleAnimation extends Animation {
+  static BG_SRC = './img/battle/bg_battle.png';
+  static BG_FRAME = 1;
+  static BG_MOVING = false;
+  static PLAYER_IMG_SRC = 'mainMBack.png';
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg}) {
+    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg});
+    this.bg;
+    this.player;
+    this.enemy;
+    this.enemyList = [];
+    this.init();
+    EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
+  }
+  addEnemyList() {
+    const LV = this.player.data.lv;
+    for(let enemy of this.enemiesData[LV]) {
+      this.enemyList.push(enemy);
+    }
+  }
+  init() {
+    // 固定背景
+    const IMG_BG = new Image();
+    this.bg = new Sprite({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      position: {
+        x: 0,
+        y: 0,
+      },
+      image: IMG_BG,
+      frames: {max: BattleAnimation.BG_FRAME},
+      moving: BattleAnimation.BG_MOVING
+    });
+    IMG_BG.src = BattleAnimation.BG_SRC;
 
-export {AverageEncounter, UICountUp,EncounterLog, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};
+    // プレイヤー
+    const IMG_PLAYER = new Image();
+    this.player = new CharacterBattle({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      image: IMG_PLAYER,
+      data: PLAYER_DATA_TYPE,
+      pathToImg: this.pathToImg,
+      bottom: Math.round(this.canvas.height * 0.3 * 10) / 10
+    });
+    IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
+    this.addEnemyList();
+  }
+  animate(playerData) {
+    this.player.updateData(playerData);
+
+    const ENEMY_DATA = choiceRandom(this.enemyList);
+    // 敵
+    const IMG_ENEMY = new Image();
+    this.enemy = new CharacterBattle({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      image: IMG_ENEMY,
+      data: ENEMY_DATA,
+      isPlayer: false,
+      pathToImg: this.pathToImg,
+    });
+    IMG_ENEMY.src = this.pathToImg + ENEMY_DATA.image.down;
+    EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.name}が現れた`, delay: 1000});
+    EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.cocktail.name}を飲みたそうにしている`, delay: 1500});
+    super.animate();
+  }
+  _update() {
+    // console.log('update')
+  }
+  _render() {
+    this.bg.draw();
+    this.enemy.draw();
+    this.player.draw();
+  }
+}
+
+export {Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};

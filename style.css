@@ -43,11 +43,12 @@ input.option__input {
   position: relative;
   width: 1024px;
 }
-.canvas-overlap {
+.overlap {
   aspect-ratio: 1;
   background-color: #000;
   border-radius: 50%;
   left: 50%;
+  opacity: 0;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
@@ -55,10 +56,11 @@ input.option__input {
 }
 
 /* 通常シーン */
-.player__ctr {
+.map-ctr {
   background-color: white;
   height: 100%;
-  right: 0;
+  right: -20%;
+  opacity: 0;
   position: absolute;
   top: 0;
   width: 20%;
@@ -121,10 +123,10 @@ input.option__input {
 }
 
 /* 戦闘シーン */
-.battle__ctr {
+.battle-ctr {
   border: solid 5px #fff;
   border-collapse: collapse;
-  bottom: -30%;
+  bottom: calc(-1 *  var(--battle-ctr--height));
   display: flex;
   gap: var(--space);
   height: var(--battle-ctr--height);

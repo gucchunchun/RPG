@@ -23,7 +23,6 @@ const PLAYER_DATA_TYPE = {
   item: [],
   step: 0,
   beat: 0,
-  encounter: 0,
   enemy: [],
   lv: 1,
   lvUpCondition: {
@@ -40,7 +39,7 @@ const ENEMY_DATA_TYPE = {
   key: 0,
   name: '',
   image: {
-      front: ''
+      down: ''
   },
   cocktail: {
       name: '',
@@ -51,17 +50,30 @@ const ENEMY_DATA_TYPE = {
 }
 
 const EVENT = {
-  step: 'step',
-  beat: 'beat',
-  encounter: 'encounter',
-  levelUp: 'levelUp',
-  getItem: 'itemGet',
-  drinkWater: 'drinkWater',
-  takeNap: 'takeNap',
+  // game start
+  playerSelect: 'playerSelect',
+  // map
+  mapStart: 'mapStart',
+  mapEnd: 'mapEnd',
   down: 'down',
   up: 'up',
   left: 'left',
   right: 'right',
+  step: 'step',
+  encounter: 'encounter',
+  beat: 'beat',
+  levelUp: 'levelUp',
+  getItem: 'itemGet',
+  drinkWater: 'drinkWater',
+  takeNap: 'takeNap',
+  // 
+  loseHp: 'loseHp',
+  recoverHp: 'recoverHp',
+  // battle
+  battleStart: 'battleStart',
+  battleEnd: 'battleEnd',
+  battleDialog: 'battleDialog',
+  run: 'run',
 }
 
 export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };
