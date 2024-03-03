@@ -32,7 +32,8 @@ const PLAYER_DATA_TYPE = {
   },
   rateEncounter: 0,
   rateRun: 0,
-  hp: 0
+  hp: 0,
+  maxHp: 10
 }
 
 const ENEMY_DATA_TYPE = {
@@ -50,11 +51,13 @@ const ENEMY_DATA_TYPE = {
 }
 
 const EVENT = {
-  itemGet: 'itemGet',
   step: 'step',
   beat: 'beat',
   encounter: 'encounter',
   levelUp: 'levelUp',
+  getItem: 'itemGet',
+  drinkWater: 'drinkWater',
+  takeNap: 'takeNap',
   down: 'down',
   up: 'up',
   left: 'left',

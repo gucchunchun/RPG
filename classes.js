@@ -151,6 +151,38 @@ class Character extends Sprite {
       return false;
     }
   }
+  loseHp(amount) {
+    amount = amount? amount : 1;
+    if(isNaN(amount)) {
+      console.log('argument should be a number'); 
+      return false;
+    }
+    const CURR_HP = this.data.hp;
+    if(isNaN(CURR_HP)) {
+      console.log(`currentHP is not a number,but ${this.data.hp}`); 
+      return false;
+    } 
+    amount = (CURR_HP - amount < 0)? CURR_HP: amount;
+    this.data.hp = CURR_HP - amount;
+    const RETURN = { ok: true, amount: amount, hp: this.data.hp}
+    return RETURN;    
+  }
+  recoverHp(amount) {
+    amount = amount? amount : 1;
+    if(isNaN(amount)) {
+      console.log('argument should be a number'); 
+      return false;
+    }
+    const CURR_HP = this.data.hp;
+    if(isNaN(CURR_HP)) {
+      console.log(`currentHP is not a number,but ${this.data.hp}`); 
+      return false;
+    } 
+    amount = (this.data.maxHp < CURR_HP + amount)? this.data.maxHp - CURR_HP: amount;
+    this.data.hp = CURR_HP + amount;
+    const RETURN = { ok: true, amount: amount, hp: this.data.hp}
+    return RETURN;    
+  }
 }
 
 // velocity: px / ゲーム1frame( 1000/FPS )
@@ -297,7 +329,9 @@ class CharacterBattle extends Character {
         },
         thickness: 5,
         width: this.drawWidth,
-        currentHp:this.data.hp});
+        currentHp:this.data.hp,
+        maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
+      });
     } 
     
   }
@@ -357,12 +391,18 @@ class CharacterBattle extends Character {
     }
   }
   loseHp(amount) {
-    this.data.hp -= amount? amount : 1;
-    this.hp.loseHp(amount);
+    amount = amount? amount : 1;
+    const RESULT = super.loseHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.loseHp(amount)) return false;
+    return RESULT;
   }
   recoverHp(amount) {
-    this.data.hp += amount? amount : 1;
-    this.hp.recoverHp(amount);
+    amount = amount? amount : 1;
+    const RESULT = super.recoverHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.recoverHp(amount)) return false;
+    return RESULT;
   }
   updateRecords({won, enemy}) {
     if(isNaN(this.data.encounter)) {
@@ -402,33 +442,60 @@ class CharacterBattle extends Character {
 }
 
 class Hp {
-  constructor({canvasContent, position, thickness=5, width=15, colorBase='rgb(255,255,255)', color='rgb(0,255,0)', currentHp}) {
+  constructor({canvasContent, position, thickness=5, width=15, colorBase='rgb(255,255,255)', color='rgb(0,255,0)', currentHp, maxHp}) {
     this.c = canvasContent;
     this.position = position;
     this.thickness = thickness;
     this.width = width;
     this.colorBase = colorBase;
     this.color = color;
-    this.maxHp = currentHp;
-    this.currentHp = currentHp;
+    this.currHp = currentHp;
+    this.maxHp = maxHp;
   }
   draw() {
-    const HP_WIDTH = Math.round(this.width * this.currentHp / this.maxHp * 10) / 10;
+    const HP_WIDTH = Math.round(this.width * this.currHp / this.maxHp * 10) / 10;
     this.c.fillStyle = this.colorBase;
     this.c.fillRect(this.position.x, this.position.y, this.width , this.thickness); // fillRect instead of rect
     this.c.fillStyle = this.color;
     this.c.fillRect(this.position.x, this.position.y, HP_WIDTH , this.thickness); // fillRect instead of rect
   }
   loseHp(amount) {
-    this.currentHp -= amount? amount : 1;
+    amount = amount? amount : 1;
+    if(isNaN(amount)) {
+      console.log('argument should be a number'); 
+      return false;
+    }
+    const CURR_HP = this.currHp;
+    if(isNaN(CURR_HP)) {
+      console.log(`currentHP is not a number, but ${this.currHp}`); 
+      return false;
+    } 
+    amount = (CURR_HP - amount < 0)? CURR_HP: amount;
+    this.currHp = CURR_HP - amount;
+    const RETURN = { ok: true, amount: amount, hp: this.currHp}
+    return RETURN;   
   }
   recoverHp(amount) {
-    this.currentHp += amount? amount : 1;
+    amount = amount? amount : 1;
+    if(isNaN(amount)) {
+      console.log('argument should be a number'); 
+      return false;
+    }
+    const CURR_HP = this.currHp;
+    if(isNaN(CURR_HP)) {
+      console.log(`currentHP is not a number, but ${this.currHp}`); 
+      return false;
+    } 
+    amount = (this.maxHp < CURR_HP - amount)? CURR_HP: amount;
+    this.currHp = CURR_HP + amount;
+    const RETURN = { ok: true, amount: amount, hp: this.currHp}
+    return RETURN;   
   }
   updateCurrentHp(currentHp) {
-    this.currentHp = currentHp || 0;
+    this.currHp = currentHp || 0;
   }
 }
+
 // コンポーネント間でイベント発火共有
 class EventBus {
   constructor() {
@@ -585,24 +652,38 @@ class FullMsg extends UI{
     super({elemID})
     this.elemCtrID = elemCtrID? elemCtrID: elemID;
     this.msgTime = Math.round(msgTime / 1000);
-    EVENT_BUS.subscribe(EVENT.itemGet, this.getItem.bind(this));
+    EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
+    EVENT_BUS.subscribe(EVENT.drinkWater, this.drinkWater.bind(this));
+    EVENT_BUS.subscribe(EVENT.takeNap, this.takeNap.bind(this));
   }
   showMsg() {
     if(!gsap) throw new Error('Install GSAP');
     gsap.timeline()
     .to(`#${this.elemCtrID}`, {
-      opacity: 1
+      opacity: 1,
+      duration: 0.25,
       }
     )
     .to(`#${this.elemCtrID}`, {
       opacity: 0,
+      duration: 0.25,
       },
-      `+=${this.msgTime}`
+      `+=${this.msgTime - 0.5}`
     )
   }
   getItem({item}) {
     if(!item) throw new Error('this event argument does not provide item');
     this.elem.innerHTML = `${item}をゲットした`;
+    this.showMsg();
+  }
+  drinkWater({recover}) {
+    if(!recover) throw new Error('this event argument does not provide recover');
+    this.elem.innerHTML = `水を飲んでHPを${recover}回復した`;
+    this.showMsg();
+  }
+  takeNap({recover}) {
+    if(!recover) throw new Error('this event argument does not provide recover');
+    this.elem.innerHTML = `お昼寝してHPを${recover}回復した`;
     this.showMsg();
   }
 }
@@ -626,7 +707,7 @@ class GameManager {
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: PLAYER_DATA, pathToImg: './img/character/', sprite:PLAYER_SPRITES});
     this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent});
-    EVENT_BUS.subscribe(EVENT.itemGet, this.handleItemGet.bind(this));
+    EVENT_BUS.subscribe(EVENT.getItem, this.handleItemGet.bind(this));
   }
   startMapAnimation() {
     this.mapAnimation.animate();
@@ -683,14 +764,24 @@ class MapAnimation extends Animation {
   static BG_FRAME = 2;
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
-  static ITEM_INTERVAL = 3000;
+  static MAP_EVENT_INTERVAL = 3000;
   constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent}) {
     super({canvas, canvasContent, fps, offSet, data, player, keyEvent});
     this.listMovable = [];
     this.item = {
-      lastItemIndex: undefined,
-      lastItemTime: 0,
-      interval: MapAnimation.ITEM_INTERVAL
+      lastIndex: undefined,
+      lastTime: 0,
+      interval: MapAnimation.MAP_EVENT_INTERVAL
+    }
+    this.water = {
+      lastIndex: undefined,
+      lastTime: 0,
+      interval: MapAnimation.MAP_EVENT_INTERVAL
+    }
+    this.nap = {
+      lastIndex: undefined,
+      lastTime: 0,
+      interval: MapAnimation.MAP_EVENT_INTERVAL
     }
     // 衝突検出用マップ
     this.boundaryMap;
@@ -846,6 +937,7 @@ class MapAnimation extends Animation {
         break;
       }
     }
+    if(!onPath) {
     //  プレイヤーが森を歩いている場合：1歩 ＝ 1px * 12frames　ゆっくり
     for(let i = 0; i < this.forestMap.length; i++) {
       const BOUNDARY = this.forestMap[i];
@@ -856,17 +948,18 @@ class MapAnimation extends Animation {
       }
     }
     //  プレイヤーが草原を歩いている場合：1歩 ＝ 2.4px * 5frames　デフォルト
-    if(!onPath && !onForest) {
+    if(!onForest) {
       this.player.changeVelocity(2.4);
+    }
     }
 
     // アイテムゲット
-    if(this.item.lastItemTime === 0 || this.item.interval <= (this.currTime - this.item.lastItemTime)) {
+    if(this.item.lastTime === 0 || this.item.interval <= (this.currTime - this.item.lastTime)) {
       for(let i = 0; i < this.itemMap.length; i++) {
         const BOUNDARY = this.itemMap[i];
         if(this.player.isColliding(BOUNDARY)) {
           // 連続したアイテムゲットを防ぐ
-          if(this.item.lastItemIndex - 2 <= i && i < this.item.lastItemIndex + 2) {
+          if(this.item.lastIndex - 2 <= i && i < this.item.lastIndex + 2) {
             break;
           }
           const LIST_ITEM = [];
@@ -877,32 +970,72 @@ class MapAnimation extends Animation {
           }
           const ITEM = choiceRandom(LIST_ITEM);
           if(this.player.addItem(ITEM)) {
-            this.item.lastItemTime = this.currTime;
-            this.item.lastItemIndex = i;
-            EVENT_BUS.publish(EVENT.itemGet, { item: this.itemsData[ITEM].name });
-            // showMsg(`${ITEM}をゲットした`);
+            this.item.lastTime = this.currTime;
+            this.item.lastIndex = i;
+            EVENT_BUS.publish(EVENT.getItem, { item: this.itemsData[ITEM].name });
             return;
           };
         }
       }
     }
-
-    if(stepped) {
-      EVENT_BUS.publish(EVENT.step, {});
-      if(this.player.levelUp()) {
-        this.player.stop();
-        return;
+    // HP回復イベント（HPがmaxじゃない時）
+    if(this.player.data.hp !== this.player.data.maxHp) {
+      // 水
+      if(this.water.lastTime === 0 || this.water.interval <= (this.currTime - this.water.lastTime)) {
+        for(let i = 0; i < this.waterMap.length; i++) {
+          const BOUNDARY = this.waterMap[i];
+          if(this.player.isColliding(BOUNDARY)) {
+            // 連続をを防ぐ
+            if(this.water.lastIndex - 1 <= i && i < this.water.lastIndex + 1) {
+              break;
+            }
+            const RESULT = this.player.recoverHp();
+            if(RESULT) {
+              this.water.lastTime = this.currTime;
+              this.water.lastIndex = i;
+              EVENT_BUS.publish(EVENT.drinkWater, { recover: RESULT.amount });
+              return;
+            };
+          }
+        }
       }
-      if(onPath) return;
-      const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
-      if(trueWithRatio(RATIO)) {
-        console.log('battle');
-        this.player.stop();
-        this.keyEvent.lastKey = undefined;
-        // 通常アニメーション停止
-        this.stopCurrAnimation();
+      // お昼寝
+      if(this.nap.lastTime === 0 || this.nap.interval <= (this.currTime - this.nap.lastTime)) {
+        for(let i = 0; i < this.napMap.length; i++) {
+          const BOUNDARY = this.napMap[i];
+          if(this.player.isColliding(BOUNDARY)) {
+            // 連続をを防ぐ
+            if(this.nap.lastIndex - 1 <= i && i < this.nap.lastIndex + 1) {
+              break;
+            }
+            const RESULT = this.player.recoverHp(2);
+            if(RESULT) {
+              this.nap.lastTime = this.currTime;
+              this.nap.lastIndex = i;
+              EVENT_BUS.publish(EVENT.takeNap, { recover: RESULT.amount });
+              return;
+            };
+          }
+        }
       }
     }
+
+    // if(stepped) {
+    //   EVENT_BUS.publish(EVENT.step, {});
+    //   if(this.player.levelUp()) {
+    //     this.player.stop();
+    //     return;
+    //   }
+    //   if(onPath) return;
+    //   const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
+    //   if(trueWithRatio(RATIO)) {
+    //     console.log('battle');
+    //     this.player.stop();
+    //     this.keyEvent.lastKey = undefined;
+    //     // 通常アニメーション停止
+    //     this.stopCurrAnimation();
+    //   }
+    // }
   }
   _render() {
     this.bg.draw();
@@ -918,12 +1051,12 @@ class MapAnimation extends Animation {
     this.itemMap.forEach(boundary=>{
       boundary.draw();
     })
-    // this.waterMap.forEach(boundary=>{
-    //   boundary.draw();
-    // })
-    // this.napMap.forEach(boundary=>{
-    //   boundary.draw();
-    // })
+    this.waterMap.forEach(boundary=>{
+      boundary.draw();
+    })
+    this.napMap.forEach(boundary=>{
+      boundary.draw();
+    })
     this.player.draw();
     this.fg.draw();
   }

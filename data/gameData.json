@@ -37,7 +37,8 @@
               },
               "rateEncounter": 0.7,
               "rateRun": 1,
-              "hp": 10
+              "hp": 5,
+              "maxHp": 10
           },
           "female": {
               "key": 1,
@@ -79,7 +80,8 @@
               },
               "rateEncounter": 0.09,
               "rateRun": 0.5,
-              "hp": 10
+              "hp": 10,
+              "maxHp": 10
           }
       },
       "enemy": {
