@@ -112,7 +112,11 @@ fetchJsonData('./data/gameData.json')
   const UI_MANAGER = new UICtrManager({overlapID: 'overlap', mapCtrID: 'mapCtr', battleCtrID: 'battleCtr', transitionTime: TRANSITION_TIME, space: SPACE});
 
   // battle
-  const BATTLE_UI = new UIBattleManager({fightOptId: 'fight', runOptId: 'run', ingOptCtrId: 'battleIngOptCtr', transitionTime: TRANSITION_TIME})
+  const BATTLE_UI = new UIBattleManager({fightOptId: 'fight', 
+    runOptId: 'run', itemWinId: 'battleItemWin', 
+    cocktailId: 'cocktail', itemCtrId: 'battleItemCtr', 
+    itemSetBtnId: 'itemSetBtn', itemData: DATA.item, 
+    transitionTime: TRANSITION_TIME});
   const BATTLE_DIALOG = new Log({elemID: 'battleDialogCtr', className: 'battle-dialog', event: EVENT.battleDialog, clearEvent: EVENT.battleEnd});
 
   const CTRL_BTN = {};
@@ -122,8 +126,8 @@ fetchJsonData('./data/gameData.json')
   const FULL_MSG = new FullMsg({elemCtrID: 'fullMsgCtr', elemID: 'fullMsg', transitionTime: TRANSITION_TIME})
   const KEY_EVENT = new KeysEvent({ctrlBtn: CTRL_BTN});
   const MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, data: DATA, transitionTime: TRANSITION_TIME, keyEvent:KEY_EVENT, pathToImg: PATH_TO_CHAR_IMG});
-  MANAGER.startMapAnimation();
-  // MANAGER.startBattleAnimation();
+  // MANAGER.startMapAnimation();
+  MANAGER.startBattleAnimation();
 
 })
 // .catch(error => {

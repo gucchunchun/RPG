@@ -729,7 +729,7 @@ class FullMsg extends UI{
   }
   getItem({item}) {
     if(!item) throw new Error('this event argument does not provide item');
-    this.elem.innerHTML = `${item}をゲットした`;
+    this.elem.innerHTML = `${item.name}をゲットした`;
     this.showMsg();
   }
   drinkWater({recover}) {
@@ -819,11 +819,16 @@ class UICtrManager {
   }
 }
 class UIBattleManager {
-  constructor({fightOptId, runOptId, ingOptCtrId, transitionTime}) {
+  constructor({fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemData, transitionTime}) {
+    console.log(fightOptId)
     this.fightOptUI = new UI({elemID: fightOptId});
     this.runOptUI = new UI({elemID: runOptId});
-    this.ingOptCtrUI = new UI({elemID: ingOptCtrId});
+    this.itemWinUI = new UI({elemID: itemWinId});
+    this.cocktailUI = new UI({elemID: cocktailId});
+    this.itemCtr = new ItemCtr({elemID: itemCtrId, itemData: itemData});
+    this.itemSetBtnUI = new UI({elemID: itemSetBtnId});
     this.transitionTime = transitionTime;
+
     this.openIngOptCtrFunc = this.openIngOptCtr.bind(this); 
     this.closeIngOptCtrFunc = this.closeIngOptCtr.bind(this); 
     this.runFunc = this.run.bind(this);
@@ -837,7 +842,8 @@ class UIBattleManager {
   openIngOptCtr(e) {
     // イベントのバブリングを防ぐ
     e.stopPropagation();
-    gsap.fromTo(`#${this.ingOptCtrUI.elemID}`, 
+    if(e.target !== this.fightOptUI.elem) return;
+    gsap.fromTo(`#${this.itemWinUI.elemID}`, 
     {
       display: 'flex',
       scale: 0
@@ -851,8 +857,9 @@ class UIBattleManager {
   }
   closeIngOptCtr(e) {
     e.stopPropagation();
-    if(e.target === this.ingOptCtrUI.elem || e.target === this.fightOptUI.elem.closest('label')) return;
-    gsap.to(`#${this.ingOptCtrUI.elemID}`, 
+    if(this.itemWinUI.elem.contains(e.target)
+    || this.fightOptUI.elem.closest('label').contains(e.target)) return;
+    gsap.to(`#${this.itemWinUI.elemID}`, 
     {
       display: 'flex',
       scale: 0
@@ -871,12 +878,24 @@ class UIBattleManager {
 
   }
 }
-class IngOptCtr {
-  constructor({ingOptCtrUI}) {
+class ItemCtr {
+  constructor({elemID, itemData}) {
+    this.itemCtr = new UI({elemID: elemID});
+    this.itemData = itemData;
 
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.makeItemList.bind(this));
+    EVENT_BUS.subscribe(EVENT.getItem, this.addItem.bind(this));
   }
-  // item list : playerSelect, itemGet
-  // cocktail name : 
+  makeItemList({playerData}) {
+    console.log(this.itemCtr.elem)
+    addOption({parent: this.itemCtr.elem, childList: playerData.item, 
+      multiAnswer: true, name: 'battleItem',
+      classList: ['item'], itemData: this.itemData})
+  }
+  addItem({item}) {
+    addOption({parent: this.itemCtr.elem, childList: [item.name], 
+      multiAnswer: true, name: 'battleItem', classList: ['item']})
+  }
 }
 
 class GameManager {
@@ -1196,7 +1215,7 @@ class MapAnimation extends Animation {
           if(this.player.addItem(ITEM)) {
             this.item.lastTime = this.currTime;
             this.item.lastIndex = i;
-            EVENT_BUS.publish(EVENT.getItem, { item: this.itemsData[ITEM].name });
+            EVENT_BUS.publish(EVENT.getItem, { item: this.itemsData[ITEM] });
             return;
           };
         }
@@ -1351,8 +1370,10 @@ class BattleAnimation extends Animation {
       pathToImg: this.pathToImg,
     });
     IMG_ENEMY.src = this.pathToImg + ENEMY_DATA.image.down;
+    const COCKTAIL = ENEMY_DATA.cocktail.name;
+    EVENT_BUS.publish(EVENT.battleReady, {cocktail: COCKTAIL})
     EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.name}が現れた`, delay: 1000});
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.cocktail.name}を飲みたそうにしている`, delay: 1500});
+    EVENT_BUS.publish(EVENT.battleDialog, {log: `${COCKTAIL}を飲みたそうにしている`, delay: 1500});
     super.animate();
   }
   _update() {
@@ -1370,7 +1391,7 @@ class BattleAnimation extends Animation {
       setTimeout(()=>{
         EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切ることができた！'});
         setTimeout(() => {
-          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy});
+          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, beat: false});
         }, this.transitionTime)
       }, this.transitionTime)
     }else {

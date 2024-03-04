@@ -73,6 +73,7 @@ const EVENT = {
   battleStart: 'battleStart',
   battleEnd: 'battleEnd',
   battleDialog: 'battleDialog',
+  battleReady: 'battleReady',
   run: 'run',
   failToRun: 'failToRun',
 }
