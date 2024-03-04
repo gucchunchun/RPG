@@ -74,6 +74,7 @@ const EVENT = {
   battleEnd: 'battleEnd',
   battleDialog: 'battleDialog',
   battleReady: 'battleReady',
+  setItem: 'setItem',
   run: 'run',
   failToRun: 'failToRun',
 }

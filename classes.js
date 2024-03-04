@@ -130,8 +130,6 @@ class Character extends Sprite {
     }
   }
   updateData(newData) {
-    console.log(newData)
-    console.log(typeof newData)
     if(typeof newData !== 'object') {
       console.log('UpdateData needs to be an object');
       return false;
@@ -236,6 +234,7 @@ class Player extends Character {
   changeStateTo(newState) {
     if(this.state !== newState) {
       this.state = newState;
+      console.log(this.state)
       switch(newState) {
         case CHARACTER_STATE.down:
           this.image = this.sprite.down;
@@ -407,15 +406,10 @@ class CharacterBattle extends Character {
     return RESULT;
   }
   updateRecords({won, enemy}) {
-    if(isNaN(this.data.encounter)) {
-      console.log('this.data.encounter is not number. It possibly does not exist');
-      return false;
-    }
     if(!this.data.enemy) {
       console.log('this.data.enemy does not exist');
       return false;
     }
-    this.data.encounter++;
     this.data.enemy.push(enemy);
     if(won) {
       if(isNaN(this.data.beat)) {
@@ -608,20 +602,29 @@ class UICount extends UI {
       EVENT_BUS.subscribe(countUpEvent, this.countUp.bind(this));
     }
     if(countDownEvent) {
-      EVENT_BUS.subscribe(countUpEvent, this.countUp.bind(this));
+      EVENT_BUS.subscribe(countDownEvent, this.countUp.bind(this));
     }
     EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.setNum.bind(this));
     this.elem.innerHTML = this.num;
   }
   _showNum() {
     this.elem.innerHTML = this.num;
   }
-  countUp() {
-    this.num++;
+  countUp({amount}) {
+    if(amount) {
+      this.num += amount;
+    }else {
+      this.num++;
+    }
     this._showNum();
   }
-  countDown() {
-    this.num--;
+  countDown({amount}) {
+    if(amount) {
+      this.num -= amount;
+    }else {
+      this.num--;
+    }
     this._showNum();
   }
   setNum({playerData}) {
@@ -635,14 +638,19 @@ class UICount extends UI {
   }
 }
 class Log extends UI {
-  constructor({elemID, className, event, dataKey, clearEvent}) {
+  constructor({elemID, className, event, dataKey, showKey, clearEvent}) {
     super({elemID});
     this.className = className;
     this.event = event;
     this.dataKey = dataKey;
-    EVENT_BUS.subscribe(this.event, this.addLog.bind(this));
+    this.showKey = showKey;
+    this.logList = [];
+    if(event) {
+      EVENT_BUS.subscribe(this.event, this.addLog.bind(this));
+    }
     if(dataKey) {
       EVENT_BUS.subscribe(EVENT.playerSelect, this.setLog.bind(this));
+      EVENT_BUS.subscribe(EVENT.battleEnd, this.setLog.bind(this));
     }
     if(clearEvent) {
       EVENT_BUS.subscribe(clearEvent, this.clearLog.bind(this));
@@ -661,12 +669,19 @@ class Log extends UI {
       return;
     }
     this.elem.append(P);
-        scrollToBottom(this.elem);
+    this.logList.push(log);
+    scrollToBottom(this.elem);
   }
   setLog({playerData}) {
-    for(let log of playerData[this.dataKey]) {
+    const NEW_LOGS = playerData[this.dataKey].filter((log, i )=>(this.logList.length - 1) < i);
+    for(let log of NEW_LOGS) {
+      for(let key of this.showKey) {
+        log = log[key]
+      }
+      console.log(log)
       this.addLog({log: log});
     }
+    scrollToBottom(this.elem);
   }
   clearLog() {
     this.elem.innerHTML = '';
@@ -678,7 +693,7 @@ class AverageEncounter extends UI {
     this.step = step || 0;
     this.encounter = encounter || 0;
     EVENT_BUS.subscribe(EVENT.step, this.stepped.bind(this));
-    EVENT_BUS.subscribe(EVENT.encounter, this.encountered.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.setNum.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
   }
   _show() {
@@ -699,7 +714,7 @@ class AverageEncounter extends UI {
   }
   setNum({playerData}) {
     this.num = playerData.step;
-    this.total = playerData.enemy.length;
+    this.encounter = playerData.enemy.length;
     this._show();
   }
 }
@@ -709,8 +724,8 @@ class FullMsg extends UI{
     this.elemCtrID = elemCtrID? elemCtrID: elemID;
     this.transitionTime = Math.round(transitionTime / 1000);
     EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
-    EVENT_BUS.subscribe(EVENT.drinkWater, this.drinkWater.bind(this));
-    EVENT_BUS.subscribe(EVENT.takeNap, this.takeNap.bind(this));
+    EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
+    EVENT_BUS.subscribe(EVENT.loseHp, this.loseHp.bind(this));
   }
   showMsg() {
     if(!gsap) throw new Error('Install GSAP');
@@ -732,14 +747,14 @@ class FullMsg extends UI{
     this.elem.innerHTML = `${item.name}をゲットした`;
     this.showMsg();
   }
-  drinkWater({recover}) {
-    if(!recover) throw new Error('this event argument does not provide recover');
-    this.elem.innerHTML = `水を飲んでHPを${recover}回復した`;
+  loseHp({amount, reason}) {
+    if(!amount || !reason) throw new Error('Error at FullMsg class');
+    this.elem.innerHTML = `${reason}HPを${amount}失った`;
     this.showMsg();
   }
-  takeNap({recover}) {
-    if(!recover) throw new Error('this event argument does not provide recover');
-    this.elem.innerHTML = `お昼寝してHPを${recover}回復した`;
+  recoverHp({amount, reason}) {
+    if(!amount || !reason) throw new Error('Error at FullMsg class');
+    this.elem.innerHTML = `${reason}HPを${amount}回復した`;
     this.showMsg();
   }
 }
@@ -819,30 +834,37 @@ class UICtrManager {
   }
 }
 class UIBattleManager {
-  constructor({fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemData, transitionTime}) {
+  constructor({fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemsData, transitionTime}) {
     console.log(fightOptId)
     this.fightOptUI = new UI({elemID: fightOptId});
     this.runOptUI = new UI({elemID: runOptId});
     this.itemWinUI = new UI({elemID: itemWinId});
     this.cocktailUI = new UI({elemID: cocktailId});
-    this.itemCtr = new ItemCtr({elemID: itemCtrId, itemData: itemData});
+    this.itemCtr = new ItemCtr({elemID: itemCtrId, itemsData: itemsData});
     this.itemSetBtnUI = new UI({elemID: itemSetBtnId});
     this.transitionTime = transitionTime;
 
-    this.openIngOptCtrFunc = this.openIngOptCtr.bind(this); 
-    this.closeIngOptCtrFunc = this.closeIngOptCtr.bind(this); 
+    this.openItemWindowFunc = this.openItemWindow.bind(this); 
+    this.closeItemWindowFunc = this.closeItemWindow.bind(this); 
     this.runFunc = this.run.bind(this);
 
-    this.fightOptUI.elem.addEventListener('click', this.openIngOptCtrFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
     this.runOptUI.elem.addEventListener('click', this.runFunc);
+    this.itemSetBtnUI.elem.addEventListener('click', this.handleItemSetBtnClick.bind(this));
 
     EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.reset.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleReady, this.handleBattleReady.bind(this));
   }
-  openIngOptCtr(e) {
-    // イベントのバブリングを防ぐ
-    e.stopPropagation();
-    if(e.target !== this.fightOptUI.elem) return;
+  handleBattleReady({cocktail}) {
+    this.cocktailUI.elem.innerHTML = cocktail;
+  }
+  openItemWindow(e) {
+    if(e) {
+      // イベントのバブリングを防ぐ
+      e.stopPropagation();
+      if(e.target !== this.fightOptUI.elem) return;
+    }
     gsap.fromTo(`#${this.itemWinUI.elemID}`, 
     {
       display: 'flex',
@@ -852,21 +874,29 @@ class UIBattleManager {
       display: 'flex',
       scale: 1
     })
-    window.addEventListener('click', this.closeIngOptCtrFunc);
-    this.fightOptUI.elem.removeEventListener('click', this.openIngOptCtrFunc);
+    window.addEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.removeEventListener('click', this.openItemWindowFunc);
   }
-  closeIngOptCtr(e) {
-    e.stopPropagation();
-    if(this.itemWinUI.elem.contains(e.target)
-    || this.fightOptUI.elem.closest('label').contains(e.target)) return;
+  closeItemWindow(e) {
+    if(e) {
+      e.stopPropagation();
+      if(this.itemWinUI.elem.contains(e.target)
+      || this.fightOptUI.elem.closest('label').contains(e.target)) return;
+    }
     gsap.to(`#${this.itemWinUI.elemID}`, 
     {
       display: 'flex',
       scale: 0
     })
-    this.fightOptUI.checked = false;
-    window.removeEventListener('click', this.closeIngOptCtrFunc);
-    this.fightOptUI.elem.addEventListener('click', this.openIngOptCtrFunc);
+    this.fightOptUI.elem.checked = false;
+    window.removeEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
+    this.itemCtr.resetChecked();
+  }
+  handleItemSetBtnClick() {
+    const CHECKED_LIST = this.itemCtr.getCheckedItemName();
+    this.closeItemWindow();
+    EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
   }
   run() {
     EVENT_BUS.publish(EVENT.run, {});
@@ -875,26 +905,37 @@ class UIBattleManager {
     this.runOptUI.elem.disabled = true;
   }
   reset() {
-
+    this.fightOptUI.elem.checked = false;
+    this.runOptUI.elem.checked = false;
+    this.runOptUI.elem.disabled = false;
   }
 }
 class ItemCtr {
-  constructor({elemID, itemData}) {
+  constructor({elemID, itemsData}) {
     this.itemCtr = new UI({elemID: elemID});
-    this.itemData = itemData;
+    this.itemsData = itemsData;
+    this.itemList = [];
 
     EVENT_BUS.subscribe(EVENT.playerSelect, this.makeItemList.bind(this));
     EVENT_BUS.subscribe(EVENT.getItem, this.addItem.bind(this));
   }
   makeItemList({playerData}) {
-    console.log(this.itemCtr.elem)
-    addOption({parent: this.itemCtr.elem, childList: playerData.item, 
+    this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
-      classList: ['item'], itemData: this.itemData})
+      classList: ['item'], itemsData: this.itemsData})
   }
   addItem({item}) {
-    addOption({parent: this.itemCtr.elem, childList: [item.name], 
-      multiAnswer: true, name: 'battleItem', classList: ['item']})
+    this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [item.name], 
+      multiAnswer: true, name: 'battleItem', classList: ['item']})[0]);
+  }
+  getCheckedItemName() {
+    const SELECTED = this.itemList.filter(item=>item.checked).map(item=>item.value);
+    return SELECTED;
+  }
+  resetChecked() {
+    for(let item of this.itemList) {
+      if(item.checked) item.checked = false;
+    }
   }
 }
 
@@ -909,7 +950,7 @@ class GameManager {
     this.transitionTime = transitionTime;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
-    this.playerData = this.data.player.male;
+    this.playerData = {...this.data.player.male};
     EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.playerData});
     const PLAYER_SPRITES = {};
     for(let key of Object.keys(this.playerData.image)) {
@@ -921,6 +962,8 @@ class GameManager {
     this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
     this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
     EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.recoverHp, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.loseHp, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
@@ -947,7 +990,6 @@ class GameManager {
     setTimeout(this.startBattleAnimation.bind(this), this.transitionTime)
   }
   handleEndBattle({playerData}) {
-    console.log(playerData)
     if(!this.player.updateData(playerData)) {
       console.log('error at handleEndBattle in GameManager');
       return;
@@ -956,7 +998,7 @@ class GameManager {
     setTimeout(this.startMapAnimation.bind(this), this.transitionTime)
   }
   showFullMsg() {
-    this.stopMapAnimation();
+    this.mapAnimation.stopCurrAnimation();
     setTimeout(this.startMapAnimation.bind(this), this.transitionTime);
   }
 }
@@ -1236,7 +1278,7 @@ class MapAnimation extends Animation {
             if(RESULT) {
               this.water.lastTime = this.currTime;
               this.water.lastIndex = i;
-              EVENT_BUS.publish(EVENT.drinkWater, { recover: RESULT.amount });
+              EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: '水を飲んで' });
               return;
             };
           }
@@ -1255,7 +1297,8 @@ class MapAnimation extends Animation {
             if(RESULT) {
               this.nap.lastTime = this.currTime;
               this.nap.lastIndex = i;
-              EVENT_BUS.publish(EVENT.takeNap, { recover: RESULT.amount });
+              console.log(RESULT.amount)
+              EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
               return;
             };
           }
@@ -1319,6 +1362,7 @@ class BattleAnimation extends Animation {
     this.init();
     EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
     EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
+    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
   }
   addEnemyList() {
     const LV = this.player.data.lv;
@@ -1358,7 +1402,7 @@ class BattleAnimation extends Animation {
   animate(playerData) {
     this.player.updateData(playerData);
 
-    const ENEMY_DATA = choiceRandom(this.enemyList);
+    const ENEMY_DATA = {...choiceRandom(this.enemyList)};
     // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
@@ -1384,14 +1428,17 @@ class BattleAnimation extends Animation {
     this.enemy.draw();
     this.player.draw();
   }
-  run() {
-    console.log(this.transitionTime)
+  dotsDialog() {
     EVENT_BUS.publish(EVENT.battleDialog, {log: '・・・'});
+  }
+  run() {
+    this.dotsDialog();
     if(this.player.run()) {
       setTimeout(()=>{
         EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切ることができた！'});
+        this.player.updateRecords({won: false, enemy: this.enemy})
         setTimeout(() => {
-          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, beat: false});
+          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: false});
         }, this.transitionTime)
       }, this.transitionTime)
     }else {
@@ -1400,6 +1447,30 @@ class BattleAnimation extends Animation {
         EVENT_BUS.publish(EVENT.failToRun, {});
       }, this.transitionTime)
     }
+  }
+  setItem({itemList}) {
+    this.dotsDialog();
+    EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.itemsData[item].name).join('、')}を混ぜた`});
+    if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.battleDialog, {log: `${this.enemy.data.name}>こっこれは${this.enemy.data.cocktail.name}!美味しそう`});
+        this.enemy.loseHp();
+        this.player.updateRecords({won: true, enemy: this.enemy})
+        setTimeout(()=> {
+          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: true});
+        }, this.transitionTime)
+      }, this.transitionTime)
+    }else {
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.battleDialog, 
+          {log: `${this.enemy.data.name}>こんなマズイもん飲めない！<br>攻撃を受けHPが1減った`});
+        if(this.player.loseHp().hp === 0) {
+          // game over
+          console.log('game over');
+        }
+      }, this.transitionTime)
+    }
+
   }
 }
 

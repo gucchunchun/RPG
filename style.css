@@ -156,10 +156,10 @@ input.option__input {
   background-color: #fff;
   width: 100%;
 }
-.battleーaction:has(input:checked) {
+.battleーact-opt:has(input:checked) {
   border: solid 3px rgba(255, 0, 0, 0.7);
 }
-.battleーaction:has(input:disabled) {
+.battleーact-opt:has(input:disabled) {
   background-color: rgba(30, 30, 30, 0.7);
 }
 
@@ -200,9 +200,6 @@ input.option__input {
   padding: var(--space);
   width: 100%;
 }
-.battle-item:has(input:checked){
-  border: solid 3px rgba(255, 0, 0, 0.7);
-}
 .button--set-battle-item {
   height: var(--fz--big);
   line-height: var(--fz--big);
@@ -211,4 +208,7 @@ input.option__input {
 .item {
   background-color: rgba(255, 255, 255, 0.5);
   flex: 0 1 calc((100% - var(--space) * 4) / 5);
+}
+.item:has(input:checked){
+  border: solid 3px rgba(255, 0, 0, 0.7);
 }

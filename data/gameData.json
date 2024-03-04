@@ -34,7 +34,7 @@
                   "beat": 2,
                   "step": 20
               },
-              "rateEncounter": 0.7,
+              "rateEncounter": 0.6,
               "rateRun": 1,
               "hp": 5,
               "maxHp": 10
