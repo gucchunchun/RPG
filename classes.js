@@ -756,8 +756,8 @@ class FullMsg extends UI{
     this.elem.innerHTML = `${reason}HPを${amount}回復した`;
     this.showMsg();
   }
-  levelUp({level}) {
-    this.elem.innerHTML = `レベル${level}になった`;
+  levelUp({playerData}) {
+    this.elem.innerHTML = `レベル${playerData.lv}になった`;
     this.showMsg();
   }
 }
@@ -954,7 +954,6 @@ class GameManager {
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
     this.playerData = {...this.data.player.male};
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.playerData});
     const PLAYER_SPRITES = {};
     for(let key of Object.keys(this.playerData.image)) {
       const IMAGE = new Image();
@@ -972,13 +971,14 @@ class GameManager {
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
 
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.playerData});
   }
   startMapAnimation() {
     this.mapAnimation.animate();
     EVENT_BUS.publish(EVENT.mapStart, {});
     if(this.player.levelUp()) {
       setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.levelUp, {level: this.player.data.lv});
+        EVENT_BUS.publish(EVENT.levelUp, {playerData: this.player.data});
       }, this.transitionTime)
     }
   }
@@ -1071,6 +1071,7 @@ class MapAnimation extends Animation {
   constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
     super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime});
     this.listMovable = [];
+    this.itemList = [];
     this.item = {
       lastIndex: undefined,
       lastTime: 0,
@@ -1098,6 +1099,18 @@ class MapAnimation extends Animation {
     this.bgMoving = MapAnimation.BG_MOVING;
     this.fg;
     this.init();
+
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.makeListItem.bind(this));
+    EVENT_BUS.subscribe(EVENT.levelUp, this.makeListItem.bind(this));
+  }
+  makeListItem({playerData}) {
+    // keyで管理
+    for(let key in this.itemsData) {
+      if(this.itemsData[key].lv === playerData.lv) {
+        this.itemList.push(key);
+      }
+    }
+    console.log(this.itemList)
   }
   init() {
     // 衝突検出用マップの作成
@@ -1136,11 +1149,6 @@ class MapAnimation extends Animation {
 
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
-
-    // EVENT_BUS.publish(EVENT.levelUp, {});
-    // EVENT_BUS.publish(EVENT.beat, {});
-    // EVENT_BUS.publish(EVENT.encounter, {});
-    // EVENT_BUS.publish(EVENT.step, {});
   }
   _update() {
     // アニメーションのアップデート
@@ -1255,13 +1263,8 @@ class MapAnimation extends Animation {
           if(this.item.lastIndex - 2 <= i && i < this.item.lastIndex + 2) {
             break;
           }
-          const LIST_ITEM = [];
-          for(let key in this.itemsData) {
-            if(this.itemsData[key].lv !== 0 &&  this.itemsData[key].lv <= this.player.data.lv) {
-              LIST_ITEM.push(key);
-            }
-          }
-          const ITEM = choiceRandom(LIST_ITEM);
+
+          const ITEM = choiceRandom(this.itemList);
           if(this.player.addItem(ITEM)) {
             this.item.lastTime = this.currTime;
             this.item.lastIndex = i;
@@ -1318,7 +1321,7 @@ class MapAnimation extends Animation {
       EVENT_BUS.publish(EVENT.step, {});
       if(this.player.levelUp()) {
         setTimeout(()=>{
-          EVENT_BUS.publish(EVENT.levelUp, {level: this.player.data.lv});
+          EVENT_BUS.publish(EVENT.levelUp, {playerData: this.player.data});
         }, this.transitionTime)
         return;
       }
@@ -1370,12 +1373,14 @@ class BattleAnimation extends Animation {
     this.enemy;
     this.enemyList = [];
     this.init();
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.addEnemyList.bind(this));
     EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
     EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
     EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
   }
-  addEnemyList() {
-    const LV = this.player.data.lv;
+  addEnemyList({playerData}) {
+    // enemyDataで管理
+    const LV = playerData.lv;
     for(let enemy of this.enemiesData[LV]) {
       this.enemyList.push(enemy);
     }
@@ -1407,7 +1412,6 @@ class BattleAnimation extends Animation {
       bottom: Math.round(this.canvas.height * 0.3 * 10) / 10
     });
     IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
-    this.addEnemyList();
   }
   animate(playerData) {
     this.player.updateData(playerData);
@@ -1460,6 +1464,7 @@ class BattleAnimation extends Animation {
   }
   setItem({itemList}) {
     this.dotsDialog();
+    console.log(itemList)
     EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.itemsData[item].name).join('、')}を混ぜた`});
     if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
       setTimeout(()=>{
