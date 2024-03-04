@@ -295,7 +295,6 @@ class Player extends Character {
     for(let key in CONDITION) {
       CONDITION[key] *= 2;
     }
-    console.log(this.data);
     return true;
   }
   addItem(item) {
@@ -678,7 +677,6 @@ class Log extends UI {
       for(let key of this.showKey) {
         log = log[key]
       }
-      console.log(log)
       this.addLog({log: log});
     }
     scrollToBottom(this.elem);
@@ -726,6 +724,7 @@ class FullMsg extends UI{
     EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
     EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
     EVENT_BUS.subscribe(EVENT.loseHp, this.loseHp.bind(this));
+    EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
   }
   showMsg() {
     if(!gsap) throw new Error('Install GSAP');
@@ -755,6 +754,10 @@ class FullMsg extends UI{
   recoverHp({amount, reason}) {
     if(!amount || !reason) throw new Error('Error at FullMsg class');
     this.elem.innerHTML = `${reason}HPを${amount}回復した`;
+    this.showMsg();
+  }
+  levelUp({level}) {
+    this.elem.innerHTML = `レベル${level}になった`;
     this.showMsg();
   }
 }
@@ -973,6 +976,11 @@ class GameManager {
   startMapAnimation() {
     this.mapAnimation.animate();
     EVENT_BUS.publish(EVENT.mapStart, {});
+    if(this.player.levelUp()) {
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.levelUp, {level: this.player.data.lv});
+      }, this.transitionTime)
+    }
   }
   stopMapAnimation() {
     this.mapAnimation.stopCurrAnimation();
@@ -1309,7 +1317,9 @@ class MapAnimation extends Animation {
     if(stepped) {
       EVENT_BUS.publish(EVENT.step, {});
       if(this.player.levelUp()) {
-        this.player.stop();
+        setTimeout(()=>{
+          EVENT_BUS.publish(EVENT.levelUp, {level: this.player.data.lv});
+        }, this.transitionTime)
         return;
       }
       if(onPath) return;

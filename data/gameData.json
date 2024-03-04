@@ -31,10 +31,10 @@
               "enemy": [],
               "lv": 1,
               "lvUpCondition": {
-                  "beat": 2,
-                  "step": 20
+                  "beat": 1,
+                  "step": 10
               },
-              "rateEncounter": 0.6,
+              "rateEncounter": 0.3,
               "rateRun": 1,
               "hp": 5,
               "maxHp": 10
