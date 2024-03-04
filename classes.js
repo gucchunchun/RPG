@@ -130,6 +130,8 @@ class Character extends Sprite {
     }
   }
   updateData(newData) {
+    console.log(newData)
+    console.log(typeof newData)
     if(typeof newData !== 'object') {
       console.log('UpdateData needs to be an object');
       return false;
@@ -751,8 +753,10 @@ class UICtrManager {
     EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
     EVENT_BUS.subscribe(EVENT.mapEnd, this.mapEnd.bind(this));
     EVENT_BUS.subscribe(EVENT.battleStart, this.battleStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.battleEnd.bind(this));
   }
   mapStart() {
+    if(!gsap) throw new Error('Install GSAP');
     gsap.to(`#${this.mapCtrID}`, 
     {
       right: 0,
@@ -771,7 +775,7 @@ class UICtrManager {
     })
     .to(`#${this.overlapID}`, 
     {
-      scale:8, 
+      scale:4, 
       opacity: 1, 
       duration: this.transitionTime, 
     }, 0)
@@ -783,13 +787,96 @@ class UICtrManager {
     })
   }
   battleStart() {
+    if(!gsap) throw new Error('Install GSAP');
     gsap.to(`#${this.battleCtrID}`, 
     {
-      bottom: `${this.space}px`,
-      opacity: 1,
-      duration: this.transitionTime,
+      display: 'block',
+      top: 0,
+      duration: this.transitionTime
     });
   }
+  battleEnd() {
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.timeline()
+    .to(`#${this.battleCtrID}`, 
+    {
+      display: 'block',
+      top: '100%',
+      duration: this.transitionTime
+    })
+    .to(`#${this.overlapID}`, 
+    {
+      scale:4, 
+      opacity: 1, 
+      duration: this.transitionTime, 
+    }, 0)
+    .to(`#${this.overlapID}`, 
+    {
+      scale:8, 
+      opacity: 0, 
+      duration: this.transitionTime, 
+    })
+  }
+}
+class UIBattleManager {
+  constructor({fightOptId, runOptId, ingOptCtrId, transitionTime}) {
+    this.fightOptUI = new UI({elemID: fightOptId});
+    this.runOptUI = new UI({elemID: runOptId});
+    this.ingOptCtrUI = new UI({elemID: ingOptCtrId});
+    this.transitionTime = transitionTime;
+    this.openIngOptCtrFunc = this.openIngOptCtr.bind(this); 
+    this.closeIngOptCtrFunc = this.closeIngOptCtr.bind(this); 
+    this.runFunc = this.run.bind(this);
+
+    this.fightOptUI.elem.addEventListener('click', this.openIngOptCtrFunc);
+    this.runOptUI.elem.addEventListener('click', this.runFunc);
+
+    EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.reset.bind(this));
+  }
+  openIngOptCtr(e) {
+    // イベントのバブリングを防ぐ
+    e.stopPropagation();
+    gsap.fromTo(`#${this.ingOptCtrUI.elemID}`, 
+    {
+      display: 'flex',
+      scale: 0
+    },
+    {
+      display: 'flex',
+      scale: 1
+    })
+    window.addEventListener('click', this.closeIngOptCtrFunc);
+    this.fightOptUI.elem.removeEventListener('click', this.openIngOptCtrFunc);
+  }
+  closeIngOptCtr(e) {
+    e.stopPropagation();
+    if(e.target === this.ingOptCtrUI.elem || e.target === this.fightOptUI.elem.closest('label')) return;
+    gsap.to(`#${this.ingOptCtrUI.elemID}`, 
+    {
+      display: 'flex',
+      scale: 0
+    })
+    this.fightOptUI.checked = false;
+    window.removeEventListener('click', this.closeIngOptCtrFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openIngOptCtrFunc);
+  }
+  run() {
+    EVENT_BUS.publish(EVENT.run, {});
+  }
+  disableRun() {
+    this.runOptUI.elem.disabled = true;
+  }
+  reset() {
+
+  }
+}
+class IngOptCtr {
+  constructor({ingOptCtrUI}) {
+
+  }
+  // item list : playerSelect, itemGet
+  // cocktail name : 
 }
 
 class GameManager {
@@ -812,12 +899,14 @@ class GameManager {
       PLAYER_SPRITES[key] = IMAGE;
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: this.playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
-    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg});
-    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
     EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
+
   }
   startMapAnimation() {
     this.mapAnimation.animate();
@@ -828,7 +917,7 @@ class GameManager {
     EVENT_BUS.publish(EVENT.mapEnd, {});
   }
   startBattleAnimation() {
-    this.battleAnimation.animate(this.playerData);
+    this.battleAnimation.animate(this.player.data);
     EVENT_BUS.publish(EVENT.battleStart, {});
   }
   stopBattleAnimation() {
@@ -838,6 +927,15 @@ class GameManager {
     this.stopMapAnimation();
     setTimeout(this.startBattleAnimation.bind(this), this.transitionTime)
   }
+  handleEndBattle({playerData}) {
+    console.log(playerData)
+    if(!this.player.updateData(playerData)) {
+      console.log('error at handleEndBattle in GameManager');
+      return;
+    };
+    this.stopBattleAnimation();
+    setTimeout(this.startMapAnimation.bind(this), this.transitionTime)
+  }
   showFullMsg() {
     this.stopMapAnimation();
     setTimeout(this.startMapAnimation.bind(this), this.transitionTime);
@@ -845,7 +943,7 @@ class GameManager {
 }
 
 class Animation {
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg}) {
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
@@ -856,6 +954,7 @@ class Animation {
     this.player = player;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
+    this.transitionTime = transitionTime;
     
     this.animationID;
     this.preTime = 0;
@@ -900,8 +999,8 @@ class MapAnimation extends Animation {
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
   static MAP_EVENT_INTERVAL = 3000;
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg}) {
-    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg});
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
+    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime});
     this.listMovable = [];
     this.item = {
       lastIndex: undefined,
@@ -1192,14 +1291,15 @@ class BattleAnimation extends Animation {
   static BG_FRAME = 1;
   static BG_MOVING = false;
   static PLAYER_IMG_SRC = 'mainMBack.png';
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg}) {
-    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg});
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime}) {
+    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime});
     this.bg;
     this.player;
     this.enemy;
     this.enemyList = [];
     this.init();
     EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
+    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
   }
   addEnemyList() {
     const LV = this.player.data.lv;
@@ -1263,6 +1363,23 @@ class BattleAnimation extends Animation {
     this.enemy.draw();
     this.player.draw();
   }
+  run() {
+    console.log(this.transitionTime)
+    EVENT_BUS.publish(EVENT.battleDialog, {log: '・・・'});
+    if(this.player.run()) {
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切ることができた！'});
+        setTimeout(() => {
+          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy});
+        }, this.transitionTime)
+      }, this.transitionTime)
+    }else {
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切れなかった...'});
+        EVENT_BUS.publish(EVENT.failToRun, {});
+      }, this.transitionTime)
+    }
+  }
 }
 
-export {Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};
+export {UIBattleManager, Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};

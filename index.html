@@ -10,7 +10,6 @@
     <h1>RPG</h1>
     <div class="canvas__ctr">
       <canvas id="canvas"></canvas>
-      <div id="overlap" class="overlap"></div>
       <div id="mapCtr" class="map-ctr">
         <dl id="playerInfoCtr" class="player-info__ctr">
           <div class="player-info">
@@ -53,40 +52,43 @@
           </button>
         </div>
       </div>
+      <div id="battleCtr" class="battle-ctr">
+        <div id="battleBottomCtr" class="battle--bottom-ctr">
+          <div class="battleーact-opt__ctr">
+            <label for="fight" class="option__label battleーact-opt">
+              <span>戦う</span>
+              <input
+                id="fight"
+                name="action"
+                type="radio"
+                class="option__input battleーact-opt__input"
+              />
+            </label>
+            <label for="run" class="option__label battleーact-opt">
+              <span>逃げる</span>
+              <input
+                id="run"
+                name="action"
+                type="radio"
+                class="option__input battleーact-opt__input"
+              />
+            </label>
+          </div>
+          <div id="battleDialogCtr" class="battle-dialog__ctr"></div>
+        </div>
+        <div id="battleIngOptCtr" class="battleーing-opt__ctr">
+          <p class="full fz--big">
+            <span id="cocktailName"></span>を作って敵を倒そう
+          </p>
+          <div id="BattleItemCtr" class="battleーitem__ctr"></div>
+          <button id="setBattleItemBtn" class="button--set-battle-item">
+            これで戦う！
+          </button>
+        </div>
+      </div>
+      <div id="overlap" class="overlap"></div>
       <div id="fullMsgCtr" class="full-msg__ctr">
         <p id="fullMsg" class="full-msg"></p>
-      </div>
-      <div id="battleCtr" class="battle-ctr">
-        <div class="battleーaction__ctr">
-          <label for="fight" class="fz--big option__label battleーaction">
-            <span>戦う</span>
-            <input
-              id="fight"
-              name="action"
-              type="radio"
-              class="option__input battleーaction__input"
-            />
-          </label>
-          <label for="run" class="fz--big option__label battleーaction">
-            <span>逃げる</span>
-            <input
-              id="run"
-              name="action"
-              type="radio"
-              class="option__input battleーaction__input"
-            />
-          </label>
-        </div>
-        <div id="battleDialogCtr" class="battle-dialog__ctr"></div>
-      </div>
-      <div id="battleFightCtr" class="battleーfight__ctr">
-        <p class="full fz--big">
-          <span id="cocktailName"></span>を作って敵を倒そう
-        </p>
-        <div id="BattleItemCtr" class="battleーitem__ctr"></div>
-        <button id="setBattleItemBtn" class="button--set-battle-item">
-          これで戦う！
-        </button>
       </div>
     </div>
     <!-- <script type="module" src="index.js"></script> -->

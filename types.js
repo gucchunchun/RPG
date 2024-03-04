@@ -74,6 +74,7 @@ const EVENT = {
   battleEnd: 'battleEnd',
   battleDialog: 'battleDialog',
   run: 'run',
+  failToRun: 'failToRun',
 }
 
 export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };

@@ -48,7 +48,7 @@ input.option__input {
   background-color: #000;
   border-radius: 50%;
   left: 50%;
-  opacity: 0;
+  pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
@@ -124,9 +124,17 @@ input.option__input {
 
 /* 戦闘シーン */
 .battle-ctr {
+  display: none;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 100%;
+  width: 100%;
+}
+.battle--bottom-ctr {
   border: solid 5px #fff;
   border-collapse: collapse;
-  bottom: calc(-1 *  var(--battle-ctr--height));
+  bottom: var(--space);
   display: flex;
   gap: var(--space);
   height: var(--battle-ctr--height);
@@ -136,7 +144,7 @@ input.option__input {
   width: calc(100% - var(--space) * 2);
   padding: var(--space);
 }
-.battleーaction__ctr {
+.battleーact-opt__ctr {
   display: flex;
   flex-direction: column;
   gap: var(--space);
@@ -144,12 +152,9 @@ input.option__input {
   width: 30%;
 }
 
-.battleーaction {
+.battleーact-opt {
   background-color: #fff;
   width: 100%;
-}
-.battleーaction span {
-  text-transform: uppercase;
 }
 .battleーaction:has(input:checked) {
   border: solid 3px rgba(255, 0, 0, 0.7);
@@ -170,7 +175,7 @@ input.option__input {
   width: 100%;
 }
 
-.battleーfight__ctr {
+.battleーing-opt__ctr {
   align-items: center;
   background-color: rgba(255, 255, 255, 0.5);
   display: none;
