@@ -519,6 +519,7 @@ class EventBus {
   }
 }
 const EVENT_BUS = new EventBus();
+console.log(EVENT_BUS)
 
 class KeysEvent {
   static KEYS = {
@@ -690,8 +691,8 @@ class Log extends UI {
 class AverageEncounter extends UI {
   constructor({elemID, step, encounter}) {
     super({elemID});
-    this.step = step || 0;
-    this.encounter = encounter || 0;
+    this.step = 0;
+    this.encounter = 0;
     EVENT_BUS.subscribe(EVENT.step, this.stepped.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.setNum.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
@@ -713,7 +714,7 @@ class AverageEncounter extends UI {
     this._show();
   }
   setNum({playerData}) {
-    this.num = playerData.step;
+    this.step = playerData.step;
     this.encounter = playerData.enemy.length;
     this._show();
   }
@@ -743,9 +744,10 @@ class FullMsg extends UI{
       `+=${this.transitionTime - 0.5}`
     )
   }
-  getItem({item}) {
-    if(!item) throw new Error('this event argument does not provide item');
-    this.elem.innerHTML = `${item.name}をゲットした`;
+  getItem({itemName}) {
+    console.log(itemName)
+    if(!itemName) throw new Error('this event argument does not provide item');
+    this.elem.innerHTML = `${itemName}をゲットした`;
     this.showMsg();
   }
   loseHp({amount, reason}) {
@@ -929,8 +931,8 @@ class ItemCtr {
       multiAnswer: true, name: 'battleItem',
       classList: ['item'], itemsData: this.itemsData})
   }
-  addItem({item}) {
-    this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [item], 
+  addItem({itemKey}) {
+    this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [itemKey], 
       multiAnswer: true, name: 'battleItem', classList: ['item'], itemsData: this.itemsData})[0]);
   }
   getCheckedItemName() {
@@ -994,6 +996,7 @@ class UITitleManager {
       CONTINUE_BTN.className = UITitleManager.BTN_CLASS;
       CONTINUE_BTN.innerHTML = `${this.prevData.name}としてゲームを始める`;
       BTN_CTR.append(CONTINUE_BTN);
+      CONTINUE_BTN.addEventListener('click', this.handleContinueBtnClick.bind(this));
     }
     TITLE_CTR.appendChild(BTN_CTR);
     this.ctrUI.elem.append(TITLE_CTR);
@@ -1141,6 +1144,10 @@ class UITitleManager {
   handlePlayerSetBtnClick() {
     EVENT_BUS.publish(EVENT.playerSetName, {name: this.name});
   }
+  handleContinueBtnClick() {
+    this.closeTittleScreen();
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.prevData});
+  }
 }
 
 class GameManager {
@@ -1154,7 +1161,6 @@ class GameManager {
     this.transitionTime = transitionTime;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
-    this.playerData;
     this.player;
     this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
     this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
@@ -1170,14 +1176,13 @@ class GameManager {
     EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
   }
   handlePlayerSelect({playerData}) {
-    this.playerData = playerData;
     const PLAYER_SPRITES = {};
-    for(let key of Object.keys(this.playerData.image)) {
+    for(let key of Object.keys(playerData.image)) {
       const IMAGE = new Image();
-      IMAGE.src = this.pathToImg + this.playerData.image[key];
+      IMAGE.src = this.pathToImg + playerData.image[key];
       PLAYER_SPRITES[key] = IMAGE;
     } 
-    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: this.playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
+    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
     this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
     this.endTitleAnimation();
     this.startMapAnimation();
@@ -1584,12 +1589,12 @@ class MapAnimation extends Animation {
             break;
           }
 
-          const ITEM = choiceRandom(this.itemList);
-          if(this.player.addItem(ITEM)) {
+          const ITEM_KEY = choiceRandom(this.itemList);
+          if(this.player.addItem(ITEM_KEY)) {
             this.item.lastTime = this.currTime;
             this.action.lastTime = this.currTime;
             this.item.lastIndex = i;
-            EVENT_BUS.publish(EVENT.getItem, { item: this.itemsData[ITEM] });
+            EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY, itemName: this.itemsData[ITEM_KEY].name });
             return;
           };
         }
@@ -1609,6 +1614,7 @@ class MapAnimation extends Animation {
             const RESULT = this.player.recoverHp();
             if(RESULT) {
               this.water.lastTime = this.currTime;
+              this.action.lastTime = this.currTime;
               this.water.lastIndex = i;
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: '水を飲んで' });
               return;
@@ -1647,6 +1653,7 @@ class MapAnimation extends Animation {
         return;
       }
       if(onPath) return;
+      if(this.action.lastTime !== 0 || (this.currTime - this.item.lastTime) < this.item.interval) return;
       const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
       if(trueWithRatio(RATIO)) {
         console.log('battle');
@@ -1700,13 +1707,11 @@ class BattleAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
   }
   addEnemyList({playerData}) {
-    console.log(playerData)
     // enemyDataで管理
     const LV = playerData.lv;
     for(let enemy of this.enemiesData[LV]) {
       this.enemyList.push(enemy);
     }
-    console.log('make enemy list')
   }
   init() {
     // 固定背景
@@ -1740,7 +1745,6 @@ class BattleAnimation extends Animation {
     this.player.updateData(playerData);
 
     const ENEMY_DATA = {...choiceRandom(this.enemyList)};
-    console.log(ENEMY_DATA)
     // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
@@ -1788,8 +1792,6 @@ class BattleAnimation extends Animation {
   }
   setItem({itemList}) {
     this.dotsDialog();
-    console.log(itemList)
-    console.log(this.itemsData)
     EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.itemsData[item].name).join('、')}を混ぜた`});
     if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
       setTimeout(()=>{

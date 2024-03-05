@@ -40,6 +40,7 @@ fetchJsonData('./data/gameData.json')
 .then(json=>{
   // ゲームデータ
   const DATA = json.data;
+  const PREV_DATA = JSON.parse(localStorage.getItem("prevData"));
 
   // キャンバス
   const CANVAS = document.getElementById('canvas');
@@ -49,7 +50,7 @@ fetchJsonData('./data/gameData.json')
   C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 
   // タイトル、プレイヤー選択画面
-  const TITLE_UI_MANAGER = new UITitleManager({ctrId: 'titleCtr', prevData: null, playersData: DATA.player, transitionTime: TRANSITION_TIME});
+  const TITLE_UI_MANAGER = new UITitleManager({ctrId: 'titleCtr', prevData: PREV_DATA, playersData: DATA.player, transitionTime: TRANSITION_TIME});
 
   // マップシーン
   const DISPLAY_LV = new UICount({elemID:'lv', countUpEvent: EVENT.levelUp, num: 1});
@@ -83,17 +84,13 @@ fetchJsonData('./data/gameData.json')
 
   //  Save data
   let isSaved = false;
-  // localStorage.setItem("name", "Chris");
-  // let myName = localStorage.getItem("name");
-  // myName;
-  // localStorage.removeItem("name");
-  // myName = localStorage.getItem("name");
-  // myName;
 
   // Prevent Reload
-  // window.addEventListener('beforeunload', (e)=> {
-  //   e.preventDefault();
-  // });
+  window.addEventListener('beforeunload', (e)=> {
+    e.preventDefault();
+    console.log(MANAGER.player.data)
+    localStorage.setItem("prevData", JSON.stringify(MANAGER.player.data));
+  });
 
 })
 // .catch(error => {
