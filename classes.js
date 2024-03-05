@@ -112,7 +112,7 @@ class Character extends Sprite {
     this.data = data? data: this.isPlayer? PLAYER_DATA_TYPE: ENEMY_DATA_TYPE;
     this.pathToImg = pathToImg;
   }
-  _updateImage() {
+  updateImage() {
     const SRC = this.pathToImg + this.data.image.down;
     const IMAGE = new Image();
     IMAGE.onload = () => {
@@ -143,7 +143,7 @@ class Character extends Sprite {
       for(let key in newData) {
         this.data[key] = newData[key];
       }
-      this._updateImage();
+      this.updateImage();
       return true;
     }else {
       console.log('Input object does not have the same keys as class data.');
@@ -302,7 +302,9 @@ class Player extends Character {
       console.log('Player.data.item is not found');
       return false;
     }
+    console.log('player has' + this.data.item)
     if(this.data.item.includes(item)) return false;
+    console.log(item)
     this.data.item.push(item);
     return true;
   }
@@ -334,7 +336,7 @@ class CharacterBattle extends Character {
     } 
     
   }
-  _updateImage() {
+  updateImage() {
     const SRC = this.pathToImg + (this.isPlayer?this.data.image.up:this.data.image.down);
     const IMAGE = new Image();
     IMAGE.onload = () => {
@@ -928,10 +930,11 @@ class ItemCtr {
       classList: ['item'], itemsData: this.itemsData})
   }
   addItem({item}) {
-    this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [item.name], 
-      multiAnswer: true, name: 'battleItem', classList: ['item']})[0]);
+    this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [item], 
+      multiAnswer: true, name: 'battleItem', classList: ['item'], itemsData: this.itemsData})[0]);
   }
   getCheckedItemName() {
+    console.log(this.itemList)
     const SELECTED = this.itemList.filter(item=>item.checked).map(item=>item.value);
     return SELECTED;
   }
@@ -939,6 +942,204 @@ class ItemCtr {
     for(let item of this.itemList) {
       if(item.checked) item.checked = false;
     }
+  }
+}
+class UITitleManager {
+  static TITLE_CTR_CLASS = 'title-tittle__ctr'
+  static TITLE = 'RPG';
+  static TITLE_CLASS = 'title-tittle';
+  static TITLE_BTN_CLASS = 'title-btn__ctr';
+  static BTN_CLASS = 'title-btn';
+  static PLAYER_SELECT_CTR = 'player-select-ctr';
+  static PLAYER_SEX_OPT_CTR = 'player-sex-opt__ctr';
+  static PLAYER_SEX_OPT = 'player-sex-opt';
+  static PLAYER_NAME_CTR = 'player-name-ctr';
+  static PLAYER_NAME = 'player-name';
+  static PLAYER_NAME_LABEL = 'player-name__label';
+  static ERR_CLASS = 'err';
+  static PLAYER_SET_BTN = 'player-set-btn';
+  constructor({ctrId, prevData, playersData, transitionTime}) {
+    this.ctrId = ctrId;
+    this.ctrUI = new UI({elemID: ctrId});
+    this.prevData = prevData;
+    this.playersData = playersData;
+    this.transitionTime = transitionTime;
+    this.titleScreen;
+    this.playerSelectScreen;
+    this.name;
+    this.nameError;
+    this.playerSetBtn;
+    this.init();
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.closePlayerSelectScreen.bind(this));
+  }
+  init() {
+    // タイトル画面
+    const TITLE_CTR = document.createElement('div');
+    TITLE_CTR.className = UITitleManager.TITLE_CTR_CLASS;
+    const TITLE = document.createElement('h1');
+    TITLE.className = UITitleManager.TITLE_CLASS;
+    TITLE.innerHTML = UITitleManager.TITLE;
+    TITLE_CTR.appendChild(TITLE);
+
+    const BTN_CTR = document.createElement('div');
+    BTN_CTR.className = UITitleManager.TITLE_BTN_CLASS;
+    const START_BTN = document.createElement('button');
+    START_BTN.className = UITitleManager.BTN_CLASS;
+    START_BTN.innerHTML = '新しくゲームを始める';
+    BTN_CTR.append(START_BTN);
+    START_BTN.addEventListener('click', this.handleStartBtnClick.bind(this));
+
+    if(this.prevData) {
+      const CONTINUE_BTN = document.createElement('button');
+      CONTINUE_BTN.className = UITitleManager.BTN_CLASS;
+      CONTINUE_BTN.innerHTML = `${this.prevData.name}としてゲームを始める`;
+      BTN_CTR.append(CONTINUE_BTN);
+    }
+    TITLE_CTR.appendChild(BTN_CTR);
+    this.ctrUI.elem.append(TITLE_CTR);
+    this.titleScreen = TITLE_CTR;
+
+    // プレイヤー選択画面
+    const PLAYER_SELECT_CTR = document.createElement('div');
+    PLAYER_SELECT_CTR.className = UITitleManager.PLAYER_SELECT_CTR;
+
+    const PLAYER_SEX_OPT_CTR = document.createElement('div');
+    PLAYER_SEX_OPT_CTR.className = UITitleManager.PLAYER_SEX_OPT_CTR;
+    const PLAYER_SEX_OPT = addOption({parent: PLAYER_SEX_OPT_CTR, childList: Object.keys(this.playersData),
+      multiAnswer: false, name: 'playerSelect', classList: [UITitleManager.PLAYER_SEX_OPT], 
+      itemsData: this.playersData});
+    PLAYER_SELECT_CTR.appendChild(PLAYER_SEX_OPT_CTR);
+    for(let opt of PLAYER_SEX_OPT) {
+      opt.addEventListener('click', this.handleSexSelect);
+    }
+
+    const PLAYER_NAME_CTR = document.createElement('div');
+    PLAYER_NAME_CTR.className = UITitleManager.PLAYER_NAME_CTR;
+    const PLAYER_NAME_LABEL = document.createElement('label');
+    PLAYER_NAME_LABEL.for = 'playerName';
+    PLAYER_NAME_LABEL.className = UITitleManager.PLAYER_NAME_LABEL;
+    PLAYER_NAME_LABEL.innerHTML = '名前?';
+    const PLAYER_NAME = document.createElement('input');
+    PLAYER_NAME.type = 'text';
+    PLAYER_NAME.id = 'playerName';
+    PLAYER_NAME.className = UITitleManager.PLAYER_NAME;
+    PLAYER_NAME.min = 1;
+    PLAYER_NAME.max = 10;
+    PLAYER_NAME.addEventListener('blur', this.handleInputName.bind(this));
+    const ERR_MSG = document.createElement('p');
+    ERR_MSG.className = UITitleManager.ERR_CLASS;
+    this.nameError = ERR_MSG;
+    PLAYER_NAME_CTR.appendChild(PLAYER_NAME_LABEL);
+    PLAYER_NAME_CTR.appendChild(PLAYER_NAME);
+    PLAYER_NAME_CTR.appendChild(ERR_MSG);
+    PLAYER_SELECT_CTR.appendChild(PLAYER_NAME_CTR);
+
+    const SET_BTN = document.createElement('button');
+    SET_BTN.className = UITitleManager.PLAYER_SET_BTN;
+    SET_BTN.innerHTML = 'ゲームスタート';
+    SET_BTN.addEventListener('click', this.handlePlayerSetBtnClick.bind(this));
+    this.playerSetBtn = SET_BTN;
+    this.disablePlayerSetBtn();
+    PLAYER_SELECT_CTR.appendChild(SET_BTN);
+
+    PLAYER_SELECT_CTR.style.display = 'none';
+    this.ctrUI.elem.appendChild(PLAYER_SELECT_CTR);
+    this.playerSelectScreen = PLAYER_SELECT_CTR;
+  }
+  handleStartBtnClick() {
+    EVENT_BUS.publish(EVENT.newGameStart);
+    this.closeTittleScreen();
+    this.openPlayerSelectScreen();
+  }
+  closeTittleScreen() {
+    gsap.timeline()
+    .to(this.titleScreen, 
+      {
+        display: 'flex',
+        opacity: 1,
+      }
+    )
+    .to(this.titleScreen, 
+      {
+        display: 'flex',
+        opacity: 0,
+        duration: this.transitionTime / 1000
+      }
+    , 0)
+    .set(this.titleScreen, 
+      {
+        display: 'none',
+        opacity: 0,
+      }
+    , `+=${this.transitionTime / 1000}`)
+  }
+  closePlayerSelectScreen() {
+    gsap.timeline()
+    .to(this.playerSelectScreen, 
+      {
+        display: 'flex',
+        opacity: 1,
+      }
+    )
+    .to(this.playerSelectScreen, 
+      {
+        display: 'flex',
+        opacity: 0,
+        duration: this.transitionTime / 1000
+      }
+    , 0)
+    .set(this.playerSelectScreen, 
+      {
+        display: 'none',
+        opacity: 0,
+      }
+    , `+=${this.transitionTime / 1000}`)
+  }
+  openPlayerSelectScreen() {
+    gsap.timeline()
+    .set(this.playerSelectScreen, 
+      {
+        display: 'flex',
+        opacity: 0,
+      }
+    )
+    .to(this.playerSelectScreen, 
+      {
+        display: 'flex',
+        opacity: 1,
+        duration: this.transitionTime / 1000
+      }
+    , `+=${this.transitionTime / 1000}`)
+  }
+  ablePlayerSetBtn() {
+    this.playerSetBtn.disabled = false;
+  }
+  disablePlayerSetBtn() {
+    this.playerSetBtn.disabled = true;
+  }
+  handleSexSelect(e) {
+    const SELECTED_KEY =  e.target.value;
+    EVENT_BUS.publish(EVENT.playerSetSex, {key: SELECTED_KEY})
+  }
+  handleInputName(e) {
+    const VALUE = e.target.value;
+    const VALUE_LEN = VALUE.length;
+    if(VALUE_LEN === 0 || 10 < VALUE_LEN) {
+      this.nameError.innerHTML = '１〜１０字にしてください';
+      this.disablePlayerSetBtn();
+      return
+    }
+    if(/\s/.test(VALUE)) {
+      this.nameError.innerHTML = 'スペースは使用できません';
+      this.disablePlayerSetBtn();
+      return
+    }
+    this.nameError.innerHTML = '';
+    this.name = VALUE;
+    this.ablePlayerSetBtn();
+  }
+  handlePlayerSetBtnClick() {
+    EVENT_BUS.publish(EVENT.playerSetName, {name: this.name});
   }
 }
 
@@ -953,7 +1154,23 @@ class GameManager {
     this.transitionTime = transitionTime;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
-    this.playerData = {...this.data.player.male};
+    this.playerData;
+    this.player;
+    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
+    this.mapAnimation;
+
+    EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.recoverHp, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.loseHp, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+  }
+  handlePlayerSelect({playerData}) {
+    this.playerData = playerData;
     const PLAYER_SPRITES = {};
     for(let key of Object.keys(this.playerData.image)) {
       const IMAGE = new Image();
@@ -962,16 +1179,14 @@ class GameManager {
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: this.playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
     this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
-    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
-    EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.recoverHp, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.loseHp, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
-
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.playerData});
+    this.endTitleAnimation();
+    this.startMapAnimation();
+  }
+  startTitleAnimation() {
+    this.titleAnimation.animate();
+  }
+  endTitleAnimation() {
+    this.titleAnimation.stopCurrAnimation();
   }
   startMapAnimation() {
     this.mapAnimation.animate();
@@ -1012,15 +1227,15 @@ class GameManager {
 }
 
 class Animation {
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
+    this.playersData = data.player;
     this.enemiesData = data.enemy;
     this.itemsData = data.item;
-    this.player = player;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
     this.transitionTime = transitionTime;
@@ -1062,16 +1277,120 @@ class Animation {
     window.cancelAnimationFrame(this.animationID);
   }
 }
+class TittleAnimation extends Animation {
+  static BG_SRC = './img/map/map.png';
+  static BG_FRAME = 2;
+  static BG_MOVING = true;
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
+    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime});
+    this.bg;
+    this.player;
+    this.playerSelectScreen = false;
+    this.positionXDiff;
+    this.positionYDiff;
+    this.drawWidthDiff;
+    this.drawHeightDiff;
+
+    this.init();
+    EVENT_BUS.subscribe(EVENT.newGameStart, ()=>{
+      this.playerSelectScreen = true
+    })
+    EVENT_BUS.subscribe(EVENT.playerSetSex, this.setSex.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
+  }
+  setSex({key}) {
+    const NEW_PLAYER_DATA = {...this.playersData[key]};
+    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
+    this.player.updateData(NEW_PLAYER_DATA);
+  }
+  setName({name}) {
+    if(!this.player.editData({key: 'name', newValue: name})) {
+      throw new Error('Error at editData in Character class');
+    }
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
+  }
+  init() {
+    // 固定背景の作成
+    const IMG_BG = new Image();
+    this.bg = new Sprite({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      position: {
+        x: 0,
+        y: 0
+      },
+      image: IMG_BG,
+      frames: {max: TittleAnimation.BG_FRAME},
+      moving: TittleAnimation.BG_MOVING,
+    });
+    IMG_BG.src = TittleAnimation.BG_SRC;
+    this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
+    this.positionXDiff = this.offSet.x - this.bg.position.x;
+    this.positionYDiff = this.offSet.y - this.bg.position.y;
+    this.drawWidthDiff = IMG_BG.width / TittleAnimation.BG_FRAME - this.canvas.width;
+    this.drawHeightDiff = IMG_BG.height - this.canvas.height;
+    const PLAYER_IMG = new Image();
+    this.player = new Player({
+      canvas: this.canvas,
+      canvasContent: this.c,
+      position: {
+        x:0,
+        y:0,
+      },
+      image: PLAYER_IMG,
+      moving: true,
+      movementDelay: 10,
+      data: {...this.playersData.male},
+      pathToImg: this.pathToImg,
+    })
+    PLAYER_IMG.src = this.pathToImg + this.playersData.male.image.down;
+  }
+  _update() {
+    const FRAME = Math.round(this.transitionTime / this.frameInterval * 10) / 10;
+
+    let drawWidth = this.bg.drawWidth;
+    let drawHeight = this.bg.drawHeight;
+    let positionX = this.bg.position.x;
+    let positionY = this.bg.position.y;
+    if(this.playerSelectScreen) {
+      if(drawWidth !== this.bg.width) {
+        drawWidth += Math.round(this.drawWidthDiff / FRAME * 10) / 10;
+        if(this.bg.width < drawWidth) drawWidth = this.bg.width;
+        drawHeight = Math.round( this.bg.height * drawWidth / this.bg.width * 10) / 10;
+        if(this.bg.height < drawHeight) drawHeight = this.bg.height;
+        this.bg.updateDrawSize({width: drawWidth, height: drawHeight});
+      }
+      if(positionX !== this.offSet.x) {
+        positionX += Math.round( this.positionXDiff / FRAME * 10) / 10;
+        if(positionX < this.offSet.x) positionX = this.offSet.x;
+        positionY = Math.round( this.offSet.y * drawHeight / this.bg.height * 10) / 10;
+        if(positionY < this.offSet.y) positionY = this.offSet.y;
+        this.bg.updatePosition({x: positionX, y: positionY});
+      }
+    }
+  }
+  _render() {
+    this.bg.draw();
+    if(!this.playerSelectScreen || this.bg.drawWidth !== this.bg.width || this.bg.position.x !== this.offSet.x) return;
+    this.player.draw();
+  } 
+  
+}
 class MapAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
   static MAP_EVENT_INTERVAL = 3000;
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
-    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime});
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime, player}) {
+    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime});
+    this.player = player;
     this.listMovable = [];
     this.itemList = [];
+    this.action = {
+      lastTime: 0,
+      interval: MapAnimation.MAP_EVENT_INTERVAL
+    }
     this.item = {
       lastIndex: undefined,
       lastTime: 0,
@@ -1100,7 +1419,6 @@ class MapAnimation extends Animation {
     this.fg;
     this.init();
 
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.makeListItem.bind(this));
     EVENT_BUS.subscribe(EVENT.levelUp, this.makeListItem.bind(this));
   }
   makeListItem({playerData}) {
@@ -1110,7 +1428,7 @@ class MapAnimation extends Animation {
         this.itemList.push(key);
       }
     }
-    console.log(this.itemList)
+    console.log('make item list')
   }
   init() {
     // 衝突検出用マップの作成
@@ -1146,6 +1464,8 @@ class MapAnimation extends Animation {
       image: IMG_FG_OBJ
     });
     IMG_FG_OBJ.src = MapAnimation.FG_SRC;
+
+    this.makeListItem({playerData: this.player.data})
 
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
@@ -1267,6 +1587,7 @@ class MapAnimation extends Animation {
           const ITEM = choiceRandom(this.itemList);
           if(this.player.addItem(ITEM)) {
             this.item.lastTime = this.currTime;
+            this.action.lastTime = this.currTime;
             this.item.lastIndex = i;
             EVENT_BUS.publish(EVENT.getItem, { item: this.itemsData[ITEM] });
             return;
@@ -1379,11 +1700,13 @@ class BattleAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
   }
   addEnemyList({playerData}) {
+    console.log(playerData)
     // enemyDataで管理
     const LV = playerData.lv;
     for(let enemy of this.enemiesData[LV]) {
       this.enemyList.push(enemy);
     }
+    console.log('make enemy list')
   }
   init() {
     // 固定背景
@@ -1417,6 +1740,7 @@ class BattleAnimation extends Animation {
     this.player.updateData(playerData);
 
     const ENEMY_DATA = {...choiceRandom(this.enemyList)};
+    console.log(ENEMY_DATA)
     // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
@@ -1465,6 +1789,7 @@ class BattleAnimation extends Animation {
   setItem({itemList}) {
     this.dotsDialog();
     console.log(itemList)
+    console.log(this.itemsData)
     EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.itemsData[item].name).join('、')}を混ぜた`});
     if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
       setTimeout(()=>{
@@ -1489,4 +1814,8 @@ class BattleAnimation extends Animation {
   }
 }
 
-export {UIBattleManager, Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};
+// UI MANAGER
+// START ANIMATION
+// DATA SAVE
+
+export {UITitleManager, UIBattleManager, Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};

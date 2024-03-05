@@ -3,7 +3,7 @@
       "player": {
           "male": {
               "key": 0,
-              "name": 0,
+              "name": "おとこのこ",
               "image": {
                   "down": "mainMFront.png",
                   "up": "mainMBack.png",
@@ -34,14 +34,14 @@
                   "beat": 1,
                   "step": 10
               },
-              "rateEncounter": 0.3,
+              "rateEncounter": 0.1,
               "rateRun": 1,
               "hp": 5,
               "maxHp": 10
           },
           "female": {
               "key": 1,
-              "name": 0,
+              "name": "おんなのこ",
               "image": {
                   "down": "mainFFront.png",
                   "up": "mainFBack.png",
@@ -76,8 +76,8 @@
                   "beat": 2,
                   "step": 70
               },
-              "rateEncounter": 0.09,
-              "rateRun": 0.5,
+              "rateEncounter": 0.5,
+              "rateRun": 1,
               "hp": 10,
               "maxHp": 10
           }

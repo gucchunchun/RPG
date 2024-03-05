@@ -4,6 +4,7 @@
   --fz--base: 24px;
   --fz--big: 32px;
   --fz--small: 16px;
+  --fz--title: 64px;
 }
 
 * {
@@ -53,6 +54,79 @@ input.option__input {
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
   width: 50%;
+}
+
+/* タイトル */
+.title-ctr {
+  align-items: center;
+  /* background-color: #000; */
+  /* display: none; */
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--space);
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  top: 0;
+  /* top: 100%; */
+  width: 100%;
+}
+.title-tittle__ctr {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--space);
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+.title-tittle {
+  font-size: var(--fz--title);
+  flex: 0 0 auto;
+  height: var(--fz--title);
+  text-align: center;
+  width: 100%;
+}
+.title-btn__ctr {
+  align-items: center;
+  display: flex;
+  gap: var(--space);
+  flex-direction: column;
+  justify-content: center;
+  width: 50%;
+}
+.title-btn {
+  width: 50%;
+}
+.player-select-ctr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space);
+  height: 100%;
+  justify-content: center;
+  right: 0;
+  padding: var(--space);
+  position: absolute;
+  top: 0;
+  width: 20%;
+}
+.player-sex-opt__ctr {
+
+}
+.player-sex-opt {
+
+}
+.player-name-ctr {
+
+}
+.player-name {
+
+}
+.player-name__label {
+
 }
 
 /* 通常シーン */

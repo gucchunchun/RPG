@@ -51,6 +51,9 @@ const ENEMY_DATA_TYPE = {
 
 const EVENT = {
   // game start
+  newGameStart: 'newGameStart',
+  playerSetSex: 'playerSetSex',
+  playerSetName: 'playerSetName',
   playerSelect: 'playerSelect',
   // map
   mapStart: 'mapStart',
