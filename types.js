@@ -78,6 +78,14 @@ const UI_MGR_INTERFACE = {
   }
 }
 
+const KEYS_INTERFACE = {
+  downKeyId: '', 
+  upKeyId: '', 
+  leftKeyId: '', 
+  rightKeyId: ''
+}
+
+
 const EVENT = {
   // game start
   newGameStart: 'newGameStart',
@@ -111,4 +119,4 @@ const EVENT = {
   failToRun: 'failToRun',
 }
 
-export { UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };
+export { KEYS_INTERFACE,  UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };

@@ -1,4 +1,4 @@
-import { UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
+import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
 import { gsap } from './node_modules/gsap/index.js';
@@ -311,6 +311,7 @@ class Player extends Character {
 }
 
 class CharacterBattle extends Character {
+  // キャンバスに対するキャラクターサイズの比率
   static PLAYER_WIDTH_RATIO = 1/6;
   static ENEMY_WIDTH_RATIO = 1/8;
   constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, isPlayer = true, data, pathToImg, bottom}) {
@@ -520,7 +521,14 @@ class EventBus {
 }
 const EVENT_BUS = new EventBus();
 
-class KeysEvent {
+// UI
+class UI {
+  constructor({elemId}) {
+    this.elemId = elemId;
+    this.elem = document.getElementById(elemId);
+  }
+}
+class Keys {
   static KEYS = {
     up: {
       pressed: false,
@@ -539,10 +547,18 @@ class KeysEvent {
       name: 'ArrowRight',
     }
   }
-  constructor({ctrlBtn= {down, up, left, right}}) {
-    this.keys = KeysEvent.KEYS;
+  constructor({downKeyId, upKeyId, leftKeyId, rightKeyId}) {
+    this.keys = Keys.KEYS;
     this.lastKey;
-    this.ctrlBtn = ctrlBtn;
+    this.ctrlBtn =  {
+      down: new UI({elemId: downKeyId}),
+      up: new UI({elemId: upKeyId}),
+      left: new UI({elemId: leftKeyId}),
+      right: new UI({elemId: rightKeyId})
+    }
+    this.init();
+  }
+  init() {
     window.addEventListener('keydown', (e) => {
       const TARGET_KEY = e.key;
       for(let direction in this.keys) {
@@ -565,14 +581,15 @@ class KeysEvent {
         }
       }
     });
-    for(let direction in ctrlBtn) {
-      ctrlBtn[direction].addEventListener('mousedown', (e)=> {
+
+    for(let direction in this.ctrlBtn) {
+      this.ctrlBtn[direction].elem.addEventListener('mousedown', (e)=> {
         const START_EVENT = new KeyboardEvent('keydown', {
           key: this.keys[direction].name,
         });
         window.dispatchEvent(START_EVENT);
       });
-      ctrlBtn[direction].addEventListener('mouseup', (e)=> {
+      this.ctrlBtn[direction].elem.addEventListener('mouseup', (e)=> {
         const END_EVENT = new KeyboardEvent('keyup', {
           key: this.keys[direction].name,
         });
@@ -585,14 +602,6 @@ class KeysEvent {
     this.keys[up].name = up? up: this.keys[up].name;
     this.keys[left].name = left? left: this.keys[left].name;
     this.keys[right].name = right? right: this.keys[right].name;
-  }
-}
-
-// UI
-class UI {
-  constructor({elemId}) {
-    this.elemId = elemId;
-    this.elem = document.getElementById(elemId);
   }
 }
 class UICount extends UI {
@@ -720,9 +729,9 @@ class AverageEncounter extends UI {
   }
 }
 class ItemCtr {
-  constructor({elemId, itemsData}) {
+  constructor({elemId, itemDatabase}) {
     this.itemCtr = new UI({elemId: elemId});
-    this.itemsData = itemsData;
+    this.itemDatabase = itemDatabase ;
     this.itemList = [];
 
     EVENT_BUS.subscribe(EVENT.playerSelect, this.makeItemList.bind(this));
@@ -731,14 +740,13 @@ class ItemCtr {
   makeItemList({playerData}) {
     this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
-      classList: ['item'], itemsData: this.itemsData})
+      classList: ['item'], itemsData: this.itemDatabase })
   }
   addItem({itemKey}) {
     this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [itemKey], 
-      multiAnswer: true, name: 'battleItem', classList: ['item'], itemsData: this.itemsData})[0]);
+      multiAnswer: true, name: 'battleItem', classList: ['item'], itemsData : this.itemDatabase })[0]);
   }
   getCheckedItemName() {
-    console.log(this.itemList)
     const SELECTED = this.itemList.filter(item=>item.checked).map(item=>item.value);
     return SELECTED;
   }
@@ -1208,16 +1216,16 @@ class BattleUIManager {
 class UIManager {
   constructor({
     UIDatabase = UI_MGR_INTERFACE,
-    gameDataBase = null,
+    gameDatabase = null,
     transTime = 0,
     styleSpace = 0
   }) {
     this.gameCtrUI = new UI({elemId: UIDatabase.game.ctrId});
-    this.titleMgr = new TitleUIManager({...UIDatabase.title, playerDatabase: gameDataBase.player, transTime: transTime});
+    this.titleMgr = new TitleUIManager({...UIDatabase.title, playerDatabase: gameDatabase.player, transTime: transTime});
     this.mapMgr = new MapUIManager({...UIDatabase.map, transTime: transTime});
-    this.battleMgr = new BattleUIManager({...UIDatabase.battle, itemsData: gameDataBase.item, transTime: transTime, styleSpace: styleSpace});
+    this.battleMgr = new BattleUIManager({...UIDatabase.battle, itemsData: gameDatabase.item, transTime: transTime, styleSpace: styleSpace});
     this.overlap = new Overlap({gameCtrUI: this.gameCtrUI, transTime: transTime});
-    this.gameDataBase = gameDataBase;
+    this.gameDatabase = gameDatabase;
     this.transTime = transTime;
     this.styleSpace = styleSpace;
     this.init();
@@ -1256,7 +1264,7 @@ class UIManager {
       console.log('Error at getItem Event: itemKey is not found');
       return;
     }
-    const MSG = `${this.gameDataBase.item[itemKey].name}をゲットした`;
+    const MSG = `${this.gameDatabase.item[itemKey].name}をゲットした`;
     this.overlap.showMsg(MSG);
   }
   recoverHp({amount, reason}) {
@@ -1280,26 +1288,26 @@ class UIManager {
       console.log('Error at levelUp Event: lv is not found');
       return;
     }
-    const MSG = `レベル${playerData.lv}になった`;
+    const MSG = `レベル${lv}になった`;
     this.overlap.showMsg(MSG);
   }
 }
 
 // アニメーションマネージャー
 class GameManager {
-  constructor({canvas, canvasContent, fps, offSet, data, transTime, keyEvent, pathToImg}) {
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, transTime, pathToImg, keysId = KEYS_INTERFACE}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
-    this.data = data;
+    this.gameDatabase = gameDatabase;
     this.transTime = transTime;
-    this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
+    this.keys = new Keys({...keysId});
     this.player;
-    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, pathToImg: this.pathToImg, transTime: this.transTime});
-    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
     this.mapAnimation;
 
     EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
@@ -1319,7 +1327,7 @@ class GameManager {
       PLAYER_SPRITES[key] = IMAGE;
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
-    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, player: this.player, keyEvent: this.keys, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
     this.endTitleAnimation();
     this.startMapAnimation();
   }
@@ -1369,16 +1377,14 @@ class GameManager {
 
 // 各アニメーション
 class Animation {
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime}) {
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, keys, pathToImg, transTime}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
-    this.playersData = data.player;
-    this.enemiesData = data.enemy;
-    this.itemsData = data.item;
-    this.keyEvent = keyEvent;
+    this.gameDatabase = gameDatabase;
+    this.keys = keys;
     this.pathToImg = pathToImg;
     this.transTime = transTime;
     
@@ -1423,8 +1429,8 @@ class TittleAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transTime}) {
-    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transTime});
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime});
     this.bg;
     this.player;
     this.playerSelectScreen = false;
@@ -1433,15 +1439,15 @@ class TittleAnimation extends Animation {
     this.drawWidthDiff;
     this.drawHeightDiff;
 
-    this.init();
     EVENT_BUS.subscribe(EVENT.newGameStart, ()=>{
       this.playerSelectScreen = true
     })
     EVENT_BUS.subscribe(EVENT.playerSetSex, this.setSex.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
+    this.init();
   }
   setSex({key}) {
-    const NEW_PLAYER_DATA = {...this.playersData[key]};
+    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
     if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
     this.player.updateData(NEW_PLAYER_DATA);
   }
@@ -1482,10 +1488,10 @@ class TittleAnimation extends Animation {
       image: PLAYER_IMG,
       moving: true,
       movementDelay: 10,
-      data: {...this.playersData.male},
+      data: {...this.gameDatabase.player.male},
       pathToImg: this.pathToImg,
     })
-    PLAYER_IMG.src = this.pathToImg + this.playersData.male.image.down;
+    PLAYER_IMG.src = this.pathToImg + this.gameDatabase.player.male.image.down;
   }
   _update() {
     const FRAME = Math.round(this.transTime / this.frameInterval * 10) / 10;
@@ -1524,8 +1530,8 @@ class MapAnimation extends Animation {
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
   static MAP_EVENT_INTERVAL = 3000;
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime, player}) {
-    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime});
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime, player}) {
+    super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.player = player;
     this.listMovable = [];
     this.itemList = [];
@@ -1566,8 +1572,9 @@ class MapAnimation extends Animation {
   makeListItem({lv}) {
     if(!lv) throw new Error('Error at levelUp Event: lv is not found');
     // keyで管理
-    for(let key in this.itemsData) {
-      if(this.itemsData[key].lv === lv) {
+    const ITEM_DATABASE = this.gameDatabase.item;
+    for(let key in ITEM_DATABASE) {
+      if(ITEM_DATABASE[key].lv === lv) {
         this.itemList.push(key);
       }
     }
@@ -1646,18 +1653,18 @@ class MapAnimation extends Animation {
       }
     }
     //  歩行を開始する時：
-    else if(this.keyEvent.lastKey) {
-      switch(this.keyEvent.lastKey) {
-        case KeysEvent.KEYS.down.name:
+    else if(this.keys.lastKey) {
+      switch(this.keys.lastKey) {
+        case Keys.KEYS.down.name:
           this.player.changeStateTo(CHARACTER_STATE.down);
           break;
-        case KeysEvent.KEYS.up.name:
+        case Keys.KEYS.up.name:
           this.player.changeStateTo(CHARACTER_STATE.up);
           break;
-        case KeysEvent.KEYS.left.name:
+        case Keys.KEYS.left.name:
           this.player.changeStateTo(CHARACTER_STATE.left);
           break;
-        case KeysEvent.KEYS.right.name:
+        case Keys.KEYS.right.name:
           this.player.changeStateTo(CHARACTER_STATE.right);
           break;
       }
@@ -1795,7 +1802,7 @@ class MapAnimation extends Animation {
       if(trueWithRatio(RATIO)) {
         console.log('battle');
         this.player.stop();
-        this.keyEvent.lastKey = undefined;
+        this.keys.lastKey = undefined;
         // 通常アニメーション停止
         // this.stopCurrAnimation();
         EVENT_BUS.publish(EVENT.encounter, {});
@@ -1831,8 +1838,8 @@ class BattleAnimation extends Animation {
   static BG_FRAME = 1;
   static BG_MOVING = false;
   static PLAYER_IMG_SRC = 'mainMBack.png';
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime}) {
-    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime});
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.bg;
     this.player;
     this.enemy;
@@ -1846,13 +1853,13 @@ class BattleAnimation extends Animation {
   addEnemyList({lv, playerData}) {
     if(lv) {
       // enemyDataで管理
-      for(let enemy of this.enemiesData[lv]) {
+      for(let enemy of this.gameDatabase.enemy[lv]) {
         this.enemyList.push(enemy);
       }
       return;
     }
     if(playerData) {
-      for(let enemy of this.enemiesData[playerData.lv]) {
+      for(let enemy of this.gameDatabase.enemy[playerData.lv]) {
         this.enemyList.push(enemy);
       }
       return;
@@ -1938,7 +1945,7 @@ class BattleAnimation extends Animation {
   }
   setItem({itemList}) {
     this.dotsDialog();
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.itemsData[item].name).join('、')}を混ぜた`});
+    EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.gameDatabase.item[item].name).join('、')}を混ぜた`});
     if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
       setTimeout(()=>{
         EVENT_BUS.publish(EVENT.battleDialog, {log: `${this.enemy.data.name}>こっこれは${this.enemy.data.cocktail.name}!美味しそう`});
@@ -1962,8 +1969,4 @@ class BattleAnimation extends Animation {
   }
 }
 
-// UI MANAGER
-// START ANIMATION
-// DATA SAVE
-
-export {UIManager, MapUIManager, TitleUIManager, BattleUIManager, Log, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, UI};
+export {UIManager, MapUIManager, TitleUIManager, BattleUIManager, Log, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, Keys, UI};
