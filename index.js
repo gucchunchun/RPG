@@ -22,6 +22,9 @@ const UI_DATABASE = {
   },
   title: {
     ctrId: 'titleCtr',
+    titlePageCtrId: 'titlePageCtr', 
+    titlePageBtnCtrId: 'titlePageBtnCtr',
+    startNewGameBtnId: 'startNewGame',
     prevData: PREV_DATA, 
   },
   map: {

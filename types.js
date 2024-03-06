@@ -55,6 +55,9 @@ const UI_MGR_INTERFACE = {
   },
   title: {
     ctrId: '',
+    titlePageCtrId: '', 
+    titlePageBtnCtrId: '',
+    startNewGameBtnId: '',
     prevData: null, 
   },
   map: {

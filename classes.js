@@ -869,11 +869,7 @@ class Overlap {
 
 // タイトル画面UI
 class TitleUIManager {
-  static TITLE_CTR_CLASS = 'title-tittle__ctr'
-  static TITLE = 'RPG';
-  static TITLE_CLASS = 'title-tittle';
-  static TITLE_BTN_CLASS = 'title-btn__ctr';
-  static BTN_CLASS = 'title-btn';
+  static BTN_CLASS = 'titlePage__btn';
   static PLAYER_SELECT_CTR = 'player-select-ctr';
   static PLAYER_SEX_OPT_CTR = 'player-sex-opt__ctr';
   static PLAYER_SEX_OPT = 'player-sex-opt';
@@ -882,13 +878,15 @@ class TitleUIManager {
   static PLAYER_NAME_LABEL = 'player-name__label';
   static ERR_CLASS = 'err';
   static PLAYER_SET_BTN = 'player-set-btn';
-  constructor({ctrId, prevData, playerDatabase, transTime}) {
+  constructor({ctrId, titlePageCtrId, titlePageBtnCtrId, startNewGameBtnId, prevData, playerDatabase, transTime}) {
     this.ctrId = ctrId;
     this.ctrUI = new UI({elemId: ctrId});
+    this.titlePageCtrUI = new UI({elemId: titlePageCtrId});
+    this.titlePageBtnCtrUI = new UI({elemId: titlePageBtnCtrId});
+    this.startNewGameBtnUI = new UI({elemId: startNewGameBtnId});
     this.prevData = prevData;
     this.playerDatabase = playerDatabase;
     this.transTime = transTime;
-    this.titleScreen;
     this.playerSelectScreen;
     this.name;
     this.nameError;
@@ -898,31 +896,15 @@ class TitleUIManager {
   }
   init() {
     // タイトル画面
-    const TITLE_CTR = document.createElement('div');
-    TITLE_CTR.className = TitleUIManager.TITLE_CTR_CLASS;
-    const TITLE = document.createElement('h1');
-    TITLE.className = TitleUIManager.TITLE_CLASS;
-    TITLE.innerHTML = TitleUIManager.TITLE;
-    TITLE_CTR.appendChild(TITLE);
-
-    const BTN_CTR = document.createElement('div');
-    BTN_CTR.className = TitleUIManager.TITLE_BTN_CLASS;
-    const START_BTN = document.createElement('button');
-    START_BTN.className = TitleUIManager.BTN_CLASS;
-    START_BTN.innerHTML = '新しくゲームを始める';
-    BTN_CTR.append(START_BTN);
-    START_BTN.addEventListener('click', this.handleStartBtnClick.bind(this));
-
+    this.startNewGameBtnUI.elem.addEventListener('click', this.handleStartBtnClick.bind(this));
+    
     if(this.prevData) {
       const CONTINUE_BTN = document.createElement('button');
       CONTINUE_BTN.className = TitleUIManager.BTN_CLASS;
       CONTINUE_BTN.innerHTML = `${this.prevData.name}としてゲームを始める`;
-      BTN_CTR.append(CONTINUE_BTN);
+      this.titlePageBtnCtrUI.elem.append(CONTINUE_BTN);
       CONTINUE_BTN.addEventListener('click', this.handleContinueBtnClick.bind(this));
     }
-    TITLE_CTR.appendChild(BTN_CTR);
-    this.ctrUI.elem.append(TITLE_CTR);
-    this.titleScreen = TITLE_CTR;
 
     // プレイヤー選択画面
     const PLAYER_SELECT_CTR = document.createElement('div');
@@ -978,20 +960,20 @@ class TitleUIManager {
   }
   closeTittleScreen() {
     gsap.timeline()
-    .to(this.titleScreen, 
+    .to(this.titlePageCtrUI.elem, 
       {
         display: 'flex',
         opacity: 1,
       }
     )
-    .to(this.titleScreen, 
+    .to(this.titlePageCtrUI.elem, 
       {
         display: 'flex',
         opacity: 0,
         duration: this.transTime / 1000
       }
     , 0)
-    .set(this.titleScreen, 
+    .set(this.titlePageCtrUI.elem, 
       {
         display: 'none',
         opacity: 0,

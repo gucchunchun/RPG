@@ -82,7 +82,7 @@ input.option__input {
   top: 0;
   width: 100%;
 }
-.title-tittle__ctr {
+.title-page__ctr {
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -92,14 +92,14 @@ input.option__input {
   justify-content: center;
   width: 100%;
 }
-.title-tittle {
+.titlePage__title {
   font-size: var(--fz--title);
   flex: 0 0 auto;
   height: var(--fz--title);
   text-align: center;
   width: 100%;
 }
-.title-btn__ctr {
+.titlePage__btn-ctr {
   align-items: center;
   display: flex;
   gap: var(--space);
@@ -107,7 +107,7 @@ input.option__input {
   justify-content: center;
   width: 50%;
 }
-.title-btn {
+.titlePage__btn {
   width: 50%;
 }
 .player-select-ctr {
