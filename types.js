@@ -49,6 +49,35 @@ const ENEMY_DATA_TYPE = {
   rank: 0
 }
 
+const UI_MGR_INTERFACE = {
+  game: {
+    ctrId: '',
+  },
+  title: {
+    ctrId: '',
+    prevData: null, 
+  },
+  map: {
+    ctrId: '',
+    sideCtrId: '', 
+    lvId: '', 
+    hpId: '', 
+    stepId: '', 
+    beatId: '', 
+    avgEncId: '', 
+    encLogCtrId: ''
+  },
+  battle: {
+    ctrId: '', 
+    fightOptId: '', 
+    runOptId: '', 
+    itemWinId: '', 
+    cocktailId: '', 
+    itemCtrId: '', 
+    itemSetBtnId: '', 
+  }
+}
+
 const EVENT = {
   // game start
   newGameStart: 'newGameStart',
@@ -82,4 +111,4 @@ const EVENT = {
   failToRun: 'failToRun',
 }
 
-export { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };
+export { UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };

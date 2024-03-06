@@ -1,4 +1,6 @@
 :root {
+  --h--game:  576;
+  --w--game: 1024;
   --space: 8px;
   --battle-ctr--height: 30%;
   --fz--base: 24px;
@@ -13,8 +15,13 @@
   padding: 0;
 }
 body {
-  background-color: #000;
+  align-items: center;
+  background-color: rgba(50, 50, 50, 1);
+  display: flex;
   font-size: var(--fz--base);
+  height: 100dvh;
+  justify-content: center;
+  width: 100dvw;
 }
 
 /* util */
@@ -30,37 +37,40 @@ input.option__input {
   height: 0;
   width: 0;
 }
-.full {
-  width: 100%;
-}
-.fz--big {
-  font-size: var(--fz--big);
-  line-height: var(--fz--big);
-}
 
-.canvas__ctr {
-  height: 576px;
+/* キャンバス */
+.game-ctr {
+  height: calc(var(--h--game) * 1px);
   overflow: hidden;
   position: relative;
-  width: 1024px;
+  width: calc(var(--1--game) * 1px);
+  margin: auto;
 }
+
+/* オーバーラップ */
 .overlap {
-  aspect-ratio: 1;
+  --diagonal-length: calc(sqrt(var(--h--game) * var(--h--game) + var(--w--game) * var(--w--game)) * 1px);
+  align-items: center;
   background-color: #000;
   border-radius: 50%;
+  display: flex;
+  height: var(--diagonal-length);
+  justify-content: center;
   left: 50%;
   pointer-events: none;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%) scale(0);
-  width: 50%;
+  width: var(--diagonal-length);
+}
+.overlap-msg {
+  color: white;
+  font-size: var(--fz--big);
 }
 
 /* タイトル */
 .title-ctr {
   align-items: center;
-  /* background-color: #000; */
-  /* display: none; */
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
@@ -70,7 +80,6 @@ input.option__input {
   left: 0;
   position: absolute;
   top: 0;
-  /* top: 100%; */
   width: 100%;
 }
 .title-tittle__ctr {
@@ -129,8 +138,16 @@ input.option__input {
 
 }
 
-/* 通常シーン */
+/* マップシーン */
 .map-ctr {
+  display: none;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+.map-side-ctr {
   background-color: white;
   height: 100%;
   right: -20%;
@@ -176,42 +193,22 @@ input.option__input {
   display: none;
 }
 
-.full-msg__ctr {
-  align-items: center;
-  aspect-ratio: 1;
-  background-color: rgba(0,0,0,0.3);
-  display: flex;
-  height: 100%;
-  justify-content: center;
-  left: 50%;
-  opacity: 0;
-  position: absolute;
-  pointer-events: none;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-}
-.full-msg {
-  color: white;
-  font-size: var(--fz--big);
-}
-
 /* 戦闘シーン */
 .battle-ctr {
   display: none;
   height: 100%;
   left: 0;
   position: absolute;
-  top: 100%;
+  top: 0;
   width: 100%;
 }
 .battle--bottom-ctr {
   border: solid 5px #fff;
   border-collapse: collapse;
-  bottom: var(--space);
+  bottom: -30%;
   display: flex;
   gap: var(--space);
-  height: var(--battle-ctr--height);
+  height: 30%;
   left: 50%;
   position: absolute;
   transform: translateX(-50%);

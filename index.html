@@ -7,50 +7,51 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>RPG</h1>
-    <div class="canvas__ctr">
+    <div id="gameCtr" class="game-ctr">
       <canvas id="canvas"></canvas>
       <div id="titleCtr" class="title-ctr"></div>
       <div id="mapCtr" class="map-ctr">
-        <dl id="playerInfoCtr" class="player-info__ctr">
-          <div class="player-info">
-            <dt class="player-info__heading">レベル</dt>
-            <dd><span id="lv"></span></dd>
+        <div id="mapSideCtr" class="map-side-ctr">
+          <dl id="playerInfoCtr" class="player-info__ctr">
+            <div class="player-info">
+              <dt class="player-info__heading">レベル</dt>
+              <dd><span id="lv"></span></dd>
+            </div>
+            <div class="player-info">
+              <dt class="player-info__heading">HP</dt>
+              <dd><span id="hp"></span></dd>
+            </div>
+            <div class="player-info">
+              <dt class="player-info__heading">総歩数</dt>
+              <dd><span id="step"></span>歩</dd>
+            </div>
+            <div class="player-info">
+              <dt class="player-info__heading">敵討伐数</dt>
+              <dd><span id="beat"></span>人</dd>
+            </div>
+            <div class="player-info">
+              <dt class="player-info__heading">敵出現平均歩数</dt>
+              <dd><span id="avgEnc"></span>歩</dd>
+            </div>
+            <div class="player-info">
+              <dt class="player-info__heading">敵出現ログ</dt>
+              <dd id="encLogCtr" class="player-info--log__ctr"></dd>
+            </div>
+          </dl>
+          <div class="player-ctrl__ctr">
+            <button id="up" class="player-ctrl move--up">
+              <span>up</span>
+            </button>
+            <button id="left" class="player-ctrl move--left">
+              <span>left</span>
+            </button>
+            <button id="right" class="player-ctrl move--right">
+              <span>right</span>
+            </button>
+            <button id="down" class="player-ctrl move--down">
+              <span>down</span>
+            </button>
           </div>
-          <div class="player-info">
-            <dt class="player-info__heading">HP</dt>
-            <dd><span id="hp"></span></dd>
-          </div>
-          <div class="player-info">
-            <dt class="player-info__heading">総歩数</dt>
-            <dd><span id="step"></span>歩</dd>
-          </div>
-          <div class="player-info">
-            <dt class="player-info__heading">敵討伐数</dt>
-            <dd><span id="beat"></span>人</dd>
-          </div>
-          <div class="player-info">
-            <dt class="player-info__heading">敵出現平均歩数</dt>
-            <dd><span id="averageEncounter"></span>歩</dd>
-          </div>
-          <div class="player-info">
-            <dt class="player-info__heading">敵出現ログ</dt>
-            <dd id="logCtr" class="player-info--log__ctr"></dd>
-          </div>
-        </dl>
-        <div class="player-ctrl__ctr">
-          <button id="up" class="player-ctrl move--up">
-            <span>up</span>
-          </button>
-          <button id="left" class="player-ctrl move--left">
-            <span>left</span>
-          </button>
-          <button id="right" class="player-ctrl move--right">
-            <span>right</span>
-          </button>
-          <button id="down" class="player-ctrl move--down">
-            <span>down</span>
-          </button>
         </div>
       </div>
       <div id="battleCtr" class="battle-ctr">
@@ -86,10 +87,6 @@
             これで戦う！
           </button>
         </div>
-      </div>
-      <div id="overlap" class="overlap"></div>
-      <div id="fullMsgCtr" class="full-msg__ctr">
-        <p id="fullMsg" class="full-msg"></p>
       </div>
     </div>
     <!-- <script type="module" src="index.js"></script> -->

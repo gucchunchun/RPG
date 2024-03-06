@@ -1,4 +1,4 @@
-import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
+import { UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from './data/boundaries.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
 import { gsap } from './node_modules/gsap/index.js';
@@ -519,7 +519,6 @@ class EventBus {
   }
 }
 const EVENT_BUS = new EventBus();
-console.log(EVENT_BUS)
 
 class KeysEvent {
   static KEYS = {
@@ -591,14 +590,14 @@ class KeysEvent {
 
 // UI
 class UI {
-  constructor({elemID}) {
-    this.elemID = elemID;
-    this.elem = document.getElementById(elemID);
+  constructor({elemId}) {
+    this.elemId = elemId;
+    this.elem = document.getElementById(elemId);
   }
 }
 class UICount extends UI {
-  constructor({elemID, countUpEvent, countDownEvent, num}) {
-    super({elemID});
+  constructor({elemId, countUpEvent, countDownEvent, num}) {
+    super({elemId});
     this.num = num? num: 0;
     if(countUpEvent) {
       EVENT_BUS.subscribe(countUpEvent, this.countUp.bind(this));
@@ -630,18 +629,19 @@ class UICount extends UI {
     this._showNum();
   }
   setNum({playerData}) {
-    if(!Object.keys(playerData).includes(this.elemID)) {
-      console.log(`check ID name ${this.elemID}`);
+    if(!Object.keys(playerData).includes(this.elemId)) {
+      console.log(`check ID name ${this.elemId}`);
       return false;
     }
-    this.num = playerData[this.elemID];
+    this.num = playerData[this.elemId];
+    console.log()
     this._showNum();
     return true;
   }
 }
 class Log extends UI {
-  constructor({elemID, className, event, dataKey, showKey, clearEvent}) {
-    super({elemID});
+  constructor({elemId, className, event, dataKey, showKey, clearEvent}) {
+    super({elemId});
     this.className = className;
     this.event = event;
     this.dataKey = dataKey;
@@ -689,10 +689,10 @@ class Log extends UI {
   }
 }
 class AverageEncounter extends UI {
-  constructor({elemID, step, encounter}) {
-    super({elemID});
-    this.step = 0;
-    this.encounter = 0;
+  constructor({elemId, step, encounter}) {
+    super({elemId});
+    this.step = step || 0;
+    this.encounter = encounter || 0;
     EVENT_BUS.subscribe(EVENT.step, this.stepped.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.setNum.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.setNum.bind(this));
@@ -719,207 +719,9 @@ class AverageEncounter extends UI {
     this._show();
   }
 }
-class FullMsg extends UI{
-  constructor({ elemID, elemCtrID, transitionTime}) {
-    super({elemID})
-    this.elemCtrID = elemCtrID? elemCtrID: elemID;
-    this.transitionTime = Math.round(transitionTime / 1000);
-    EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
-    EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
-    EVENT_BUS.subscribe(EVENT.loseHp, this.loseHp.bind(this));
-    EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
-  }
-  showMsg() {
-    if(!gsap) throw new Error('Install GSAP');
-    gsap.timeline()
-    .to(`#${this.elemCtrID}`, {
-      opacity: 1,
-      duration: 0.25,
-      }
-    )
-    .to(`#${this.elemCtrID}`, {
-      opacity: 0,
-      duration: 0.25,
-      },
-      `+=${this.transitionTime - 0.5}`
-    )
-  }
-  getItem({itemName}) {
-    console.log(itemName)
-    if(!itemName) throw new Error('this event argument does not provide item');
-    this.elem.innerHTML = `${itemName}をゲットした`;
-    this.showMsg();
-  }
-  loseHp({amount, reason}) {
-    if(!amount || !reason) throw new Error('Error at FullMsg class');
-    this.elem.innerHTML = `${reason}HPを${amount}失った`;
-    this.showMsg();
-  }
-  recoverHp({amount, reason}) {
-    if(!amount || !reason) throw new Error('Error at FullMsg class');
-    this.elem.innerHTML = `${reason}HPを${amount}回復した`;
-    this.showMsg();
-  }
-  levelUp({playerData}) {
-    this.elem.innerHTML = `レベル${playerData.lv}になった`;
-    this.showMsg();
-  }
-}
-class UICtrManager {
-  constructor({overlapID, mapCtrID, battleCtrID, transitionTime, space}) {
-    this.overlapID = overlapID;
-    this.mapCtrID = mapCtrID;
-    this.battleCtrID = battleCtrID;
-    this.transitionTime = transitionTime / 1000;
-    this.space = space
-    EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
-    EVENT_BUS.subscribe(EVENT.mapEnd, this.mapEnd.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleStart, this.battleStart.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleEnd, this.battleEnd.bind(this));
-  }
-  mapStart() {
-    if(!gsap) throw new Error('Install GSAP');
-    gsap.to(`#${this.mapCtrID}`, 
-    {
-      right: 0,
-      opacity: 1, 
-      duration: this.transitionTime
-    });
-  }
-  mapEnd() {
-    if(!gsap) throw new Error('Install GSAP');
-    gsap.timeline()
-    .to(`#${this.mapCtrID}`, 
-    {
-      right: '-20%',
-      opacity: 0, 
-      duration: this.transitionTime
-    })
-    .to(`#${this.overlapID}`, 
-    {
-      scale:4, 
-      opacity: 1, 
-      duration: this.transitionTime, 
-    }, 0)
-    .to(`#${this.overlapID}`, 
-    {
-      scale:8, 
-      opacity: 0, 
-      duration: this.transitionTime, 
-    })
-  }
-  battleStart() {
-    if(!gsap) throw new Error('Install GSAP');
-    gsap.to(`#${this.battleCtrID}`, 
-    {
-      display: 'block',
-      top: 0,
-      duration: this.transitionTime
-    });
-  }
-  battleEnd() {
-    if(!gsap) throw new Error('Install GSAP');
-    gsap.timeline()
-    .to(`#${this.battleCtrID}`, 
-    {
-      display: 'block',
-      top: '100%',
-      duration: this.transitionTime
-    })
-    .to(`#${this.overlapID}`, 
-    {
-      scale:4, 
-      opacity: 1, 
-      duration: this.transitionTime, 
-    }, 0)
-    .to(`#${this.overlapID}`, 
-    {
-      scale:8, 
-      opacity: 0, 
-      duration: this.transitionTime, 
-    })
-  }
-}
-class UIBattleManager {
-  constructor({fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemsData, transitionTime}) {
-    console.log(fightOptId)
-    this.fightOptUI = new UI({elemID: fightOptId});
-    this.runOptUI = new UI({elemID: runOptId});
-    this.itemWinUI = new UI({elemID: itemWinId});
-    this.cocktailUI = new UI({elemID: cocktailId});
-    this.itemCtr = new ItemCtr({elemID: itemCtrId, itemsData: itemsData});
-    this.itemSetBtnUI = new UI({elemID: itemSetBtnId});
-    this.transitionTime = transitionTime;
-
-    this.openItemWindowFunc = this.openItemWindow.bind(this); 
-    this.closeItemWindowFunc = this.closeItemWindow.bind(this); 
-    this.runFunc = this.run.bind(this);
-
-    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
-    this.runOptUI.elem.addEventListener('click', this.runFunc);
-    this.itemSetBtnUI.elem.addEventListener('click', this.handleItemSetBtnClick.bind(this));
-
-    EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleEnd, this.reset.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleReady, this.handleBattleReady.bind(this));
-  }
-  handleBattleReady({cocktail}) {
-    this.cocktailUI.elem.innerHTML = cocktail;
-  }
-  openItemWindow(e) {
-    if(e) {
-      // イベントのバブリングを防ぐ
-      e.stopPropagation();
-      if(e.target !== this.fightOptUI.elem) return;
-    }
-    gsap.fromTo(`#${this.itemWinUI.elemID}`, 
-    {
-      display: 'flex',
-      scale: 0
-    },
-    {
-      display: 'flex',
-      scale: 1
-    })
-    window.addEventListener('click', this.closeItemWindowFunc);
-    this.fightOptUI.elem.removeEventListener('click', this.openItemWindowFunc);
-  }
-  closeItemWindow(e) {
-    if(e) {
-      e.stopPropagation();
-      if(this.itemWinUI.elem.contains(e.target)
-      || this.fightOptUI.elem.closest('label').contains(e.target)) return;
-    }
-    gsap.to(`#${this.itemWinUI.elemID}`, 
-    {
-      display: 'flex',
-      scale: 0
-    })
-    this.fightOptUI.elem.checked = false;
-    window.removeEventListener('click', this.closeItemWindowFunc);
-    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
-    this.itemCtr.resetChecked();
-  }
-  handleItemSetBtnClick() {
-    const CHECKED_LIST = this.itemCtr.getCheckedItemName();
-    this.closeItemWindow();
-    EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
-  }
-  run() {
-    EVENT_BUS.publish(EVENT.run, {});
-  }
-  disableRun() {
-    this.runOptUI.elem.disabled = true;
-  }
-  reset() {
-    this.fightOptUI.elem.checked = false;
-    this.runOptUI.elem.checked = false;
-    this.runOptUI.elem.disabled = false;
-  }
-}
 class ItemCtr {
-  constructor({elemID, itemsData}) {
-    this.itemCtr = new UI({elemID: elemID});
+  constructor({elemId, itemsData}) {
+    this.itemCtr = new UI({elemId: elemId});
     this.itemsData = itemsData;
     this.itemList = [];
 
@@ -946,7 +748,119 @@ class ItemCtr {
     }
   }
 }
-class UITitleManager {
+
+class Overlap {
+  static OVERLAP_CLASS = 'overlap';
+  static OVERLAP_MSG_CLASS = 'overlap-msg';
+  constructor({gameCtrUI, transTime}) {
+    this.gameCtrUI = gameCtrUI;
+    this.transTime = transTime; //millisecond
+    this.overlap;
+    this.overlapMsg;
+    this.init();
+  }
+
+  init() {
+    const OVERLAP = document.createElement('div');
+    OVERLAP.className = Overlap.OVERLAP_CLASS;
+    const OVERLAP_MSG = document.createElement('p');
+    OVERLAP_MSG.className = Overlap.OVERLAP_MSG_CLASS;
+    OVERLAP.appendChild(OVERLAP_MSG);
+    this.gameCtrUI.elem.appendChild(OVERLAP);
+    this.overlap = OVERLAP;
+    this.overlapMsg = OVERLAP_MSG;
+  }
+  circle() {
+    if(!gsap) {
+      console.log('Install GSAP'); 
+      return;
+    }
+    gsap.timeline()
+    .fromTo(this.overlap, 
+      {
+        scale: 0, 
+        opacity: 0, 
+      },
+      {
+        scale: 1, 
+        opacity: 1, 
+        duration: this.transTime / 1000, 
+      }
+    )
+    .to(this.overlap, 
+      {
+        scale: 1, 
+        opacity: 0, 
+        duration: this.transTime / 1000, 
+      }
+    )
+  }
+  down() {
+    if(!gsap) {
+      console.log('Install GSAP'); 
+      return;
+    }
+    gsap.timeline()
+    .fromTo(this.overlap, 
+    {
+      borderRadius: 0,
+      scale: 1, 
+      opacity: 1, 
+      top: `${this.overlap.height / 2}px`,
+    },
+    {
+      scale: 1, 
+      opacity: 1, 
+      top: '50%',
+      duration: this.transTime / 2 / 1000, 
+    })
+    .to(this.overlap, 
+    {
+      borderRadius: '50%',
+      scale: 1, 
+      opacity: 0, 
+      duration: this.transTime / 1000, 
+    }, 
+    `>${this.transTime / 2 / 1000}`
+    );
+  }
+  addMsg(msg) {
+    this.overlapMsg.innerHTML = msg;
+
+  }
+  showMsg(msg) {
+    this.addMsg(msg);
+    gsap.timeline()
+    .fromTo(this.overlap, 
+      {
+        backgroundColor: 'rgba(0, 0, 0, 0)',
+        scale: 1, 
+        opacity: 0, 
+      },
+      {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        scale: 1, 
+        opacity: 1, 
+        duration: this.transTime / 2 / 1000, 
+      }
+    )
+    .to(this.overlap, 
+      {
+        backgroundColor: 'rgba(0, 0, 0, 1)',
+        scale: 1, 
+        opacity: 0, 
+        duration: this.transTime / 1000, 
+      }, 
+      `>${this.transTime / 2 / 1000}`
+    );
+    setTimeout(() => {
+      this.addMsg('');
+    }, this.transTime * 2)
+  }
+}
+
+// タイトル画面UI
+class TitleUIManager {
   static TITLE_CTR_CLASS = 'title-tittle__ctr'
   static TITLE = 'RPG';
   static TITLE_CLASS = 'title-tittle';
@@ -960,12 +874,12 @@ class UITitleManager {
   static PLAYER_NAME_LABEL = 'player-name__label';
   static ERR_CLASS = 'err';
   static PLAYER_SET_BTN = 'player-set-btn';
-  constructor({ctrId, prevData, playersData, transitionTime}) {
+  constructor({ctrId, prevData, playerDatabase, transTime}) {
     this.ctrId = ctrId;
-    this.ctrUI = new UI({elemID: ctrId});
+    this.ctrUI = new UI({elemId: ctrId});
     this.prevData = prevData;
-    this.playersData = playersData;
-    this.transitionTime = transitionTime;
+    this.playerDatabase = playerDatabase;
+    this.transTime = transTime;
     this.titleScreen;
     this.playerSelectScreen;
     this.name;
@@ -977,23 +891,23 @@ class UITitleManager {
   init() {
     // タイトル画面
     const TITLE_CTR = document.createElement('div');
-    TITLE_CTR.className = UITitleManager.TITLE_CTR_CLASS;
+    TITLE_CTR.className = TitleUIManager.TITLE_CTR_CLASS;
     const TITLE = document.createElement('h1');
-    TITLE.className = UITitleManager.TITLE_CLASS;
-    TITLE.innerHTML = UITitleManager.TITLE;
+    TITLE.className = TitleUIManager.TITLE_CLASS;
+    TITLE.innerHTML = TitleUIManager.TITLE;
     TITLE_CTR.appendChild(TITLE);
 
     const BTN_CTR = document.createElement('div');
-    BTN_CTR.className = UITitleManager.TITLE_BTN_CLASS;
+    BTN_CTR.className = TitleUIManager.TITLE_BTN_CLASS;
     const START_BTN = document.createElement('button');
-    START_BTN.className = UITitleManager.BTN_CLASS;
+    START_BTN.className = TitleUIManager.BTN_CLASS;
     START_BTN.innerHTML = '新しくゲームを始める';
     BTN_CTR.append(START_BTN);
     START_BTN.addEventListener('click', this.handleStartBtnClick.bind(this));
 
     if(this.prevData) {
       const CONTINUE_BTN = document.createElement('button');
-      CONTINUE_BTN.className = UITitleManager.BTN_CLASS;
+      CONTINUE_BTN.className = TitleUIManager.BTN_CLASS;
       CONTINUE_BTN.innerHTML = `${this.prevData.name}としてゲームを始める`;
       BTN_CTR.append(CONTINUE_BTN);
       CONTINUE_BTN.addEventListener('click', this.handleContinueBtnClick.bind(this));
@@ -1004,33 +918,33 @@ class UITitleManager {
 
     // プレイヤー選択画面
     const PLAYER_SELECT_CTR = document.createElement('div');
-    PLAYER_SELECT_CTR.className = UITitleManager.PLAYER_SELECT_CTR;
+    PLAYER_SELECT_CTR.className = TitleUIManager.PLAYER_SELECT_CTR;
 
     const PLAYER_SEX_OPT_CTR = document.createElement('div');
-    PLAYER_SEX_OPT_CTR.className = UITitleManager.PLAYER_SEX_OPT_CTR;
-    const PLAYER_SEX_OPT = addOption({parent: PLAYER_SEX_OPT_CTR, childList: Object.keys(this.playersData),
-      multiAnswer: false, name: 'playerSelect', classList: [UITitleManager.PLAYER_SEX_OPT], 
-      itemsData: this.playersData});
+    PLAYER_SEX_OPT_CTR.className = TitleUIManager.PLAYER_SEX_OPT_CTR;
+    const PLAYER_SEX_OPT = addOption({parent: PLAYER_SEX_OPT_CTR, childList: Object.keys(this.playerDatabase),
+      multiAnswer: false, name: 'playerSelect', classList: [TitleUIManager.PLAYER_SEX_OPT], 
+      itemsData: this.playerDatabase});
     PLAYER_SELECT_CTR.appendChild(PLAYER_SEX_OPT_CTR);
     for(let opt of PLAYER_SEX_OPT) {
       opt.addEventListener('click', this.handleSexSelect);
     }
 
     const PLAYER_NAME_CTR = document.createElement('div');
-    PLAYER_NAME_CTR.className = UITitleManager.PLAYER_NAME_CTR;
+    PLAYER_NAME_CTR.className = TitleUIManager.PLAYER_NAME_CTR;
     const PLAYER_NAME_LABEL = document.createElement('label');
     PLAYER_NAME_LABEL.for = 'playerName';
-    PLAYER_NAME_LABEL.className = UITitleManager.PLAYER_NAME_LABEL;
+    PLAYER_NAME_LABEL.className = TitleUIManager.PLAYER_NAME_LABEL;
     PLAYER_NAME_LABEL.innerHTML = '名前?';
     const PLAYER_NAME = document.createElement('input');
     PLAYER_NAME.type = 'text';
     PLAYER_NAME.id = 'playerName';
-    PLAYER_NAME.className = UITitleManager.PLAYER_NAME;
+    PLAYER_NAME.className = TitleUIManager.PLAYER_NAME;
     PLAYER_NAME.min = 1;
     PLAYER_NAME.max = 10;
     PLAYER_NAME.addEventListener('blur', this.handleInputName.bind(this));
     const ERR_MSG = document.createElement('p');
-    ERR_MSG.className = UITitleManager.ERR_CLASS;
+    ERR_MSG.className = TitleUIManager.ERR_CLASS;
     this.nameError = ERR_MSG;
     PLAYER_NAME_CTR.appendChild(PLAYER_NAME_LABEL);
     PLAYER_NAME_CTR.appendChild(PLAYER_NAME);
@@ -1038,7 +952,7 @@ class UITitleManager {
     PLAYER_SELECT_CTR.appendChild(PLAYER_NAME_CTR);
 
     const SET_BTN = document.createElement('button');
-    SET_BTN.className = UITitleManager.PLAYER_SET_BTN;
+    SET_BTN.className = TitleUIManager.PLAYER_SET_BTN;
     SET_BTN.innerHTML = 'ゲームスタート';
     SET_BTN.addEventListener('click', this.handlePlayerSetBtnClick.bind(this));
     this.playerSetBtn = SET_BTN;
@@ -1066,7 +980,7 @@ class UITitleManager {
       {
         display: 'flex',
         opacity: 0,
-        duration: this.transitionTime / 1000
+        duration: this.transTime / 1000
       }
     , 0)
     .set(this.titleScreen, 
@@ -1074,7 +988,7 @@ class UITitleManager {
         display: 'none',
         opacity: 0,
       }
-    , `+=${this.transitionTime / 1000}`)
+    , `+=${this.transTime / 1000}`)
   }
   closePlayerSelectScreen() {
     gsap.timeline()
@@ -1088,7 +1002,7 @@ class UITitleManager {
       {
         display: 'flex',
         opacity: 0,
-        duration: this.transitionTime / 1000
+        duration: this.transTime / 1000
       }
     , 0)
     .set(this.playerSelectScreen, 
@@ -1096,7 +1010,7 @@ class UITitleManager {
         display: 'none',
         opacity: 0,
       }
-    , `+=${this.transitionTime / 1000}`)
+    , `+=${this.transTime / 1000}`)
   }
   openPlayerSelectScreen() {
     gsap.timeline()
@@ -1110,9 +1024,9 @@ class UITitleManager {
       {
         display: 'flex',
         opacity: 1,
-        duration: this.transitionTime / 1000
+        duration: this.transTime / 1000
       }
-    , `+=${this.transitionTime / 1000}`)
+    , `+=${this.transTime / 1000}`)
   }
   ablePlayerSetBtn() {
     this.playerSetBtn.disabled = false;
@@ -1149,21 +1063,243 @@ class UITitleManager {
     EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.prevData});
   }
 }
+// マップ画面UI
+class MapUIManager {
+  static ENC_LOG_CLASS = 'playerInfo--log';
+  constructor({ctrId, sideCtrId, lvId, hpId, stepId, beatId, avgEncId, encLogCtrId, transTime}) {
+    this.ctrUI = new UI({elemId: ctrId});
+    this.sideCtrUI = new UI({elemId: sideCtrId});
+    this.lvMgr = new UICount({elemId: lvId, countUpEvent: EVENT.levelUp, num: 1});
+    this.hpMgr = new UICount({elemId: hpId, countUpEvent: EVENT.recoverHp, countDownEvent: EVENT.loseHp});
+    this.stepMgr = new UICount({elemId: stepId, countUpEvent: EVENT.step});
+    this.beatMgr = new UICount({elemId: beatId});
+    this.avgEncMgr = new AverageEncounter({elemId: avgEncId});
+    this.encLogMgr = new Log({elemId: encLogCtrId, className: MapUIManager.ENC_LOG_CLASS, dataKey: 'enemy', showKey: ['data', 'name']});
+    this.transTime = transTime;
+  }
+  mapStart() {
+    this.ctrUI.elem.style.display = 'flex';
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.to(this.sideCtrUI.elem, 
+      {
+        right: 0,
+        opacity: 1,
+        duration: this.transTime / 1000
+      }
+    );
+  }
+  mapEnd() {
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.to(this.sideCtrUI.elem, 
+      {
+        right: `-${this.sideCtrUI.elem.clientWidth}px`,
+        opacity: 0, 
+        duration: this.transTime / 1000
+      }
+    );
+    setTimeout(()=>{
+      this.ctrUI.elem.style.display = 'flex';
+    }, this.transTime)
+  }
+}
+// バトル画面UI
+class BattleUIManager {
+  constructor({ctrId, bottomCtrId, fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemsData, transTime, styleSpace}) {
+    this.ctrUI = new UI({elemId: ctrId});
+    this.bottomCtrUI = new UI({elemId: bottomCtrId});
+    this.fightOptUI = new UI({elemId: fightOptId});
+    this.runOptUI = new UI({elemId: runOptId});
+    this.itemWinUI = new UI({elemId: itemWinId});
+    this.cocktailUI = new UI({elemId: cocktailId});
+    this.itemCtr = new ItemCtr({elemId: itemCtrId, itemsData: itemsData});
+    this.itemSetBtnUI = new UI({elemId: itemSetBtnId});
+    this.transTime = transTime;
+    this.styleSpace = styleSpace;
 
+    this.openItemWindowFunc = this.openItemWindow.bind(this); 
+    this.closeItemWindowFunc = this.closeItemWindow.bind(this); 
+    this.runFunc = this.run.bind(this);
+
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
+    this.runOptUI.elem.addEventListener('click', this.runFunc);
+    this.itemSetBtnUI.elem.addEventListener('click', this.handleItemSetBtnClick.bind(this));
+
+    EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleReady, this.handleBattleReady.bind(this));
+  }
+  handleBattleReady({cocktail}) {
+    this.cocktailUI.elem.innerHTML = cocktail;
+  }
+  openItemWindow(e) {
+    if(e) {
+      // イベントのバブリングを防ぐ
+      e.stopPropagation();
+      if(e.target !== this.fightOptUI.elem) return;
+    }
+    gsap.fromTo(`#${this.itemWinUI.elemId}`, 
+    {
+      display: 'flex',
+      scale: 0
+    },
+    {
+      display: 'flex',
+      scale: 1
+    })
+    window.addEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.removeEventListener('click', this.openItemWindowFunc);
+  }
+  closeItemWindow(e) {
+    if(e) {
+      e.stopPropagation();
+      if(this.itemWinUI.elem.contains(e.target)
+      || this.fightOptUI.elem.closest('label').contains(e.target)) return;
+    }
+    gsap.to(`#${this.itemWinUI.elemId}`, 
+    {
+      display: 'flex',
+      scale: 0
+    })
+    this.fightOptUI.elem.checked = false;
+    window.removeEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
+    this.itemCtr.resetChecked();
+  }
+  handleItemSetBtnClick() {
+    const CHECKED_LIST = this.itemCtr.getCheckedItemName();
+    this.closeItemWindow();
+    EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
+  }
+  run() {
+    EVENT_BUS.publish(EVENT.run, {});
+  }
+  disableRun() {
+    this.runOptUI.elem.disabled = true;
+  }
+  reset() {
+    this.fightOptUI.elem.checked = false;
+    this.runOptUI.elem.checked = false;
+    this.runOptUI.elem.disabled = false;
+  }
+  battleStart() {
+    this.ctrUI.elem.style.display = 'flex';
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.to(this.bottomCtrUI.elem,
+      {
+        bottom: `${this.styleSpace}px`,
+        duration: this.transTime / 1000
+      }
+    )
+  }
+  battleEnd() {
+    if(!gsap) throw new Error('Install GSAP');
+    gsap.to(this.bottomCtrUI.elem,
+      {
+        bottom: `-${this.bottomCtrUI.elem.clientHeight}px`,
+        duration: this.transTime / 1000
+      }
+    )
+    setTimeout(()=> {
+      this.ctrUI.elem.style.display = 'none';
+      this.reset();
+    }, this.transTime)
+  }
+}
+// 全体
+class UIManager {
+  constructor({
+    UIDatabase = UI_MGR_INTERFACE,
+    gameDataBase = null,
+    transTime = 0,
+    styleSpace = 0
+  }) {
+    this.gameCtrUI = new UI({elemId: UIDatabase.game.ctrId});
+    this.titleMgr = new TitleUIManager({...UIDatabase.title, playerDatabase: gameDataBase.player, transTime: transTime});
+    this.mapMgr = new MapUIManager({...UIDatabase.map, transTime: transTime});
+    this.battleMgr = new BattleUIManager({...UIDatabase.battle, itemsData: gameDataBase.item, transTime: transTime, styleSpace: styleSpace});
+    this.overlap = new Overlap({gameCtrUI: this.gameCtrUI, transTime: transTime});
+    this.gameDataBase = gameDataBase;
+    this.transTime = transTime;
+    this.styleSpace = styleSpace;
+    this.init();
+  }
+
+  init() {
+    // コンテナ
+    EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.mapEnd, this.mapEnd.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleStart, this.battleStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.battleEnd.bind(this));
+
+    // オーバーラップメッセージ
+    EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
+    EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
+    EVENT_BUS.subscribe(EVENT.loseHp, this.loseHp.bind(this));
+    EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
+  }
+
+  mapStart() {
+    this.mapMgr.mapStart();
+  }
+  mapEnd() {
+    this.overlap.circle();
+    this.mapMgr.mapEnd();
+  }
+  battleStart() {
+    this.battleMgr.battleStart();
+  }
+  battleEnd() {
+    this.overlap.circle();
+    this.battleMgr.battleEnd();
+  }
+  getItem({itemKey}) {
+    if(!itemKey) {
+      console.log('Error at getItem Event: itemKey is not found');
+      return;
+    }
+    const MSG = `${this.gameDataBase.item[itemKey].name}をゲットした`;
+    this.overlap.showMsg(MSG);
+  }
+  recoverHp({amount, reason}) {
+    if(!amount || !reason) {
+      console.log('Error at recoverHp Event: amount or reason is not found');
+      return;
+    }
+    const MSG = `${reason}HPを${amount}回復した`;
+    this.overlap.showMsg(MSG);
+  }
+  loseHp({amount, reason}) {
+    if(!amount || !reason) {
+      console.log('Error at loseHp Event: amount or reason is not found');
+      return;
+    }
+    const MSG = `${reason}HPを${amount}失った`;
+    this.overlap.showMsg(MSG);
+  }
+  levelUp({lv}) {
+    if(!lv) {
+      console.log('Error at levelUp Event: lv is not found');
+      return;
+    }
+    const MSG = `レベル${playerData.lv}になった`;
+    this.overlap.showMsg(MSG);
+  }
+}
+
+// アニメーションマネージャー
 class GameManager {
-  constructor({canvas, canvasContent, fps, offSet, data, transitionTime, keyEvent, pathToImg}) {
+  constructor({canvas, canvasContent, fps, offSet, data, transTime, keyEvent, pathToImg}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
     this.frameInterval = 1000 / this.fps;
     this.offSet = offSet;
     this.data = data;
-    this.transitionTime = transitionTime;
+    this.transTime = transTime;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
     this.player;
-    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
-    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
+    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, data: this.data, pathToImg: this.pathToImg, transTime: this.transTime});
     this.mapAnimation;
 
     EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
@@ -1183,7 +1319,7 @@ class GameManager {
       PLAYER_SPRITES[key] = IMAGE;
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
-    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transitionTime: this.transitionTime});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, data: this.data, player: this.player, keyEvent: this.keyEvent, pathToImg: this.pathToImg, transTime: this.transTime});
     this.endTitleAnimation();
     this.startMapAnimation();
   }
@@ -1198,8 +1334,8 @@ class GameManager {
     EVENT_BUS.publish(EVENT.mapStart, {});
     if(this.player.levelUp()) {
       setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.levelUp, {playerData: this.player.data});
-      }, this.transitionTime)
+        EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
+      }, this.transTime)
     }
   }
   stopMapAnimation() {
@@ -1215,7 +1351,7 @@ class GameManager {
   }
   handleEncounter() {
     this.stopMapAnimation();
-    setTimeout(this.startBattleAnimation.bind(this), this.transitionTime)
+    setTimeout(this.startBattleAnimation.bind(this), this.transTime)
   }
   handleEndBattle({playerData}) {
     if(!this.player.updateData(playerData)) {
@@ -1223,16 +1359,17 @@ class GameManager {
       return;
     };
     this.stopBattleAnimation();
-    setTimeout(this.startMapAnimation.bind(this), this.transitionTime)
+    setTimeout(this.startMapAnimation.bind(this), this.transTime)
   }
   showFullMsg() {
     this.mapAnimation.stopCurrAnimation();
-    setTimeout(this.startMapAnimation.bind(this), this.transitionTime);
+    setTimeout(this.startMapAnimation.bind(this), this.transTime);
   }
 }
 
+// 各アニメーション
 class Animation {
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime}) {
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime}) {
     this.canvas = canvas;
     this.c = canvasContent;
     this.fps = fps;
@@ -1243,9 +1380,9 @@ class Animation {
     this.itemsData = data.item;
     this.keyEvent = keyEvent;
     this.pathToImg = pathToImg;
-    this.transitionTime = transitionTime;
+    this.transTime = transTime;
     
-    this.animationID;
+    this.animationId;
     this.preTime = 0;
     this.currTime = 0;
     this.lag = 0;
@@ -1263,7 +1400,7 @@ class Animation {
     this._animate();
   } 
   _animate() {
-    this.animationID = window.requestAnimationFrame(this._animate.bind(this));
+    this.animationId = window.requestAnimationFrame(this._animate.bind(this));
     this.getLagTime();
     while(this.frameInterval <= this.lag) {
       this._update();
@@ -1279,15 +1416,15 @@ class Animation {
 
   }
   stopCurrAnimation() {
-    window.cancelAnimationFrame(this.animationID);
+    window.cancelAnimationFrame(this.animationId);
   }
 }
 class TittleAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
-  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime}) {
-    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transitionTime});
+  constructor({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, data, player, keyEvent, pathToImg, transTime});
     this.bg;
     this.player;
     this.playerSelectScreen = false;
@@ -1351,7 +1488,7 @@ class TittleAnimation extends Animation {
     PLAYER_IMG.src = this.pathToImg + this.playersData.male.image.down;
   }
   _update() {
-    const FRAME = Math.round(this.transitionTime / this.frameInterval * 10) / 10;
+    const FRAME = Math.round(this.transTime / this.frameInterval * 10) / 10;
 
     let drawWidth = this.bg.drawWidth;
     let drawHeight = this.bg.drawHeight;
@@ -1387,8 +1524,8 @@ class MapAnimation extends Animation {
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
   static MAP_EVENT_INTERVAL = 3000;
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime, player}) {
-    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime});
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime, player}) {
+    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime});
     this.player = player;
     this.listMovable = [];
     this.itemList = [];
@@ -1426,14 +1563,14 @@ class MapAnimation extends Animation {
 
     EVENT_BUS.subscribe(EVENT.levelUp, this.makeListItem.bind(this));
   }
-  makeListItem({playerData}) {
+  makeListItem({lv}) {
+    if(!lv) throw new Error('Error at levelUp Event: lv is not found');
     // keyで管理
     for(let key in this.itemsData) {
-      if(this.itemsData[key].lv === playerData.lv) {
+      if(this.itemsData[key].lv === lv) {
         this.itemList.push(key);
       }
     }
-    console.log('make item list')
   }
   init() {
     // 衝突検出用マップの作成
@@ -1470,7 +1607,7 @@ class MapAnimation extends Animation {
     });
     IMG_FG_OBJ.src = MapAnimation.FG_SRC;
 
-    this.makeListItem({playerData: this.player.data})
+    this.makeListItem({lv: this.player.data.lv})
 
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
@@ -1594,7 +1731,7 @@ class MapAnimation extends Animation {
             this.item.lastTime = this.currTime;
             this.action.lastTime = this.currTime;
             this.item.lastIndex = i;
-            EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY, itemName: this.itemsData[ITEM_KEY].name });
+            EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY });
             return;
           };
         }
@@ -1648,12 +1785,12 @@ class MapAnimation extends Animation {
       EVENT_BUS.publish(EVENT.step, {});
       if(this.player.levelUp()) {
         setTimeout(()=>{
-          EVENT_BUS.publish(EVENT.levelUp, {playerData: this.player.data});
-        }, this.transitionTime)
+          EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
+        }, this.transTime)
         return;
       }
       if(onPath) return;
-      if(this.action.lastTime !== 0 || (this.currTime - this.item.lastTime) < this.item.interval) return;
+      if(this.action.lastTime !== 0 && (this.currTime - this.item.lastTime) < this.item.interval) return;
       const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
       if(trueWithRatio(RATIO)) {
         console.log('battle');
@@ -1694,8 +1831,8 @@ class BattleAnimation extends Animation {
   static BG_FRAME = 1;
   static BG_MOVING = false;
   static PLAYER_IMG_SRC = 'mainMBack.png';
-  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime}) {
-    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transitionTime});
+  constructor({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, data, keyEvent, pathToImg, transTime});
     this.bg;
     this.player;
     this.enemy;
@@ -1706,12 +1843,21 @@ class BattleAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
     EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
   }
-  addEnemyList({playerData}) {
-    // enemyDataで管理
-    const LV = playerData.lv;
-    for(let enemy of this.enemiesData[LV]) {
-      this.enemyList.push(enemy);
+  addEnemyList({lv, playerData}) {
+    if(lv) {
+      // enemyDataで管理
+      for(let enemy of this.enemiesData[lv]) {
+        this.enemyList.push(enemy);
+      }
+      return;
     }
+    if(playerData) {
+      for(let enemy of this.enemiesData[playerData.lv]) {
+        this.enemyList.push(enemy);
+      }
+      return;
+    }
+    throw new Error('Error at playerSelect / levelUp Event: lv or playerData not found')
   }
   init() {
     // 固定背景
@@ -1781,13 +1927,13 @@ class BattleAnimation extends Animation {
         this.player.updateRecords({won: false, enemy: this.enemy})
         setTimeout(() => {
           EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: false});
-        }, this.transitionTime)
-      }, this.transitionTime)
+        }, this.transTime)
+      }, this.transTime)
     }else {
       setTimeout(()=>{
         EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切れなかった...'});
         EVENT_BUS.publish(EVENT.failToRun, {});
-      }, this.transitionTime)
+      }, this.transTime)
     }
   }
   setItem({itemList}) {
@@ -1800,8 +1946,8 @@ class BattleAnimation extends Animation {
         this.player.updateRecords({won: true, enemy: this.enemy})
         setTimeout(()=> {
           EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: true});
-        }, this.transitionTime)
-      }, this.transitionTime)
+        }, this.transTime)
+      }, this.transTime)
     }else {
       setTimeout(()=>{
         EVENT_BUS.publish(EVENT.battleDialog, 
@@ -1810,7 +1956,7 @@ class BattleAnimation extends Animation {
           // game over
           console.log('game over');
         }
-      }, this.transitionTime)
+      }, this.transTime)
     }
 
   }
@@ -1820,4 +1966,4 @@ class BattleAnimation extends Animation {
 // START ANIMATION
 // DATA SAVE
 
-export {UITitleManager, UIBattleManager, Log, UICtrManager, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, FullMsg, UI};
+export {UIManager, MapUIManager, TitleUIManager, BattleUIManager, Log, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, KeysEvent, UI};
