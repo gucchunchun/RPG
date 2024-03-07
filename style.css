@@ -4,7 +4,6 @@
   --h--game:  576;
   --w--game: 1024;
   --space: 8;
-  --battle-ctr--height: 30%;
   --fz--base: 24px;
   --fz--big: 32px;
   --fz--small: 16px;
@@ -262,7 +261,7 @@ input.option__input {
   display: none;
   flex-direction: column;
   gap: calc(1px * var(--space));
-  height: calc(100% - var(--battle-ctr--height) - var(--space) * 3px);
+  height: calc(70% - var(--space) * 3px);
   top: calc(1px * var(--space));
   left: 50%;
   padding: calc(1px * var(--space));

@@ -55,6 +55,10 @@ const KEYS_ID = {
   leftKeyId: 'left', 
   rightKeyId: 'right'
 }
+const ROOT = document.querySelector(':root');
+ROOT.style.setProperty('--w--game', CANVAS_WIDTH);
+ROOT.style.setProperty('--h--game', CANVAS_HEIGHT);
+ROOT.style.setProperty('--space', SPACE);
 
 fetchJsonData('./data/gameData.json')
 .then(json=>{
@@ -81,8 +85,7 @@ fetchJsonData('./data/gameData.json')
   // リロードの禁止
   window.addEventListener('beforeunload', (e)=> {
     e.preventDefault();
-    console.log(MANAGER.player.data)
-    localStorage.setItem("prevData", JSON.stringify(MANAGER.player.data));
+    localStorage.setItem("prevData", JSON.stringify(GAME_MANAGER.player.data));
   });
 
 })
