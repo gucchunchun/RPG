@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap');
+
 :root {
   --h--game:  576;
   --w--game: 1024;
-  --space: 8px;
+  --space: 8;
   --battle-ctr--height: 30%;
   --fz--base: 24px;
   --fz--big: 32px;
@@ -11,6 +13,7 @@
 
 * {
   box-sizing: border-box;
+  font-family: inherit;
   margin: 0;
   padding: 0;
 }
@@ -19,6 +22,9 @@ body {
   background-color: rgba(50, 50, 50, 1);
   display: flex;
   font-size: var(--fz--base);
+  font-family: "Dela Gothic One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
   height: 100dvh;
   justify-content: center;
   width: 100dvw;
@@ -74,7 +80,7 @@ input.option__input {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   left: 0;
@@ -87,7 +93,7 @@ input.option__input {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   width: 100%;
@@ -95,38 +101,41 @@ input.option__input {
 .titlePage__title {
   font-size: var(--fz--title);
   flex: 0 0 auto;
-  height: var(--fz--title);
   text-align: center;
   width: 100%;
 }
 .titlePage__btn-ctr {
   align-items: center;
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   flex-direction: column;
   justify-content: center;
   width: 50%;
 }
 .titlePage__btn {
+
   width: 50%;
 }
 .player-select-ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   right: 0;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   position: absolute;
   top: 0;
   width: 20%;
 }
 .player-sex-opt__ctr {
-
-}
+  display: flex;
+  flex-direction: column;
+  gap: calc(1px * var(--space));
+} 
 .player-sex-opt {
-
+  background-color: #fff;
+  border-radius: 10px;
 }
 .player-name-ctr {
 
@@ -176,7 +185,7 @@ input.option__input {
 .playerInfo--log {
   height: var(--fz--base);
   line-height: var(--fz--base);
-  margin-block: var(--space);
+  margin-block: calc(1px * var(--space));
   white-space: nowrap;
 }
 
@@ -207,18 +216,18 @@ input.option__input {
   border-collapse: collapse;
   bottom: -30%;
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 30%;
   left: 50%;
   position: absolute;
   transform: translateX(-50%);
-  width: calc(100% - var(--space) * 2);
-  padding: var(--space);
+  width: calc(100% - var(--space) * 2px);
+  padding: calc(1px * var(--space));
 }
 .battleーact-opt__ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   justify-content: space-evenly;
   width: 30%;
 }
@@ -237,10 +246,11 @@ input.option__input {
 .battle-dialog__ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  flex: 1 0 auto;
+  gap: calc(1px * var(--space));
   justify-content: flex-start;
   overflow: scroll;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
 }
 .battle-dialog {
   width: 100%;
@@ -251,11 +261,11 @@ input.option__input {
   background-color: rgba(255, 255, 255, 0.5);
   display: none;
   flex-direction: column;
-  gap: var(--space);
-  height: calc(100% - var(--battle-ctr--height) - var(--space) * 3);
-  top: var(--space);
+  gap: calc(1px * var(--space));
+  height: calc(100% - var(--battle-ctr--height) - var(--space) * 3px);
+  top: calc(1px * var(--space));
   left: 50%;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   position: absolute;
   transform: translate(-50%, 0%);
   width: 70%;
@@ -265,20 +275,19 @@ input.option__input {
 }
 .battleーitem__ctr {
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   flex: 1 0 auto;
   flex-wrap: wrap;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   width: 100%;
 }
 .button--set-battle-item {
   height: var(--fz--big);
-  line-height: var(--fz--big);
 }
 
 .item {
   background-color: rgba(255, 255, 255, 0.5);
-  flex: 0 1 calc((100% - var(--space) * 4) / 5);
+  flex: 0 1 calc((100% - var(--space) * 4px) / 5);
 }
 .item:has(input:checked){
   border: solid 3px rgba(255, 0, 0, 0.7);
