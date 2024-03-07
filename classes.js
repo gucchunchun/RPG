@@ -1428,17 +1428,6 @@ class TittleAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
     this.init();
   }
-  setSex({key}) {
-    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
-    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
-    this.player.updateData(NEW_PLAYER_DATA);
-  }
-  setName({name}) {
-    if(!this.player.editData({key: 'name', newValue: name})) {
-      throw new Error('Error at editData in Character class');
-    }
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
-  }
   init() {
     // 固定背景の作成
     const IMG_BG = new Image();
@@ -1457,8 +1446,6 @@ class TittleAnimation extends Animation {
     this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
     this.positionXDiff = this.offSet.x - this.bg.position.x;
     this.positionYDiff = this.offSet.y - this.bg.position.y;
-    this.drawWidthDiff = IMG_BG.width / TittleAnimation.BG_FRAME - this.canvas.width;
-    this.drawHeightDiff = IMG_BG.height - this.canvas.height;
     const PLAYER_IMG = new Image();
     this.player = new Player({
       canvas: this.canvas,
@@ -1475,25 +1462,41 @@ class TittleAnimation extends Animation {
     })
     PLAYER_IMG.src = this.pathToImg + this.gameDatabase.player.male.image.down;
   }
+  setSex({key}) {
+    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
+    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
+    this.player.updateData(NEW_PLAYER_DATA);
+  }
+  setName({name}) {
+    if(!this.player.editData({key: 'name', newValue: name})) {
+      throw new Error('Error at editData in Character class');
+    }
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
+  }
   _update() {
+    while(!this.drawWidthDiff || !this.drawHeightDiff) {
+      this.drawWidthDiff = this.bg.width  - this.canvas.width;
+      this.drawHeightDiff = this.bg.height - this.canvas.height;
+    }
     const FRAME = Math.round(this.transTime / this.frameInterval * 10) / 10;
 
     let drawWidth = this.bg.drawWidth;
     let drawHeight = this.bg.drawHeight;
     let positionX = this.bg.position.x;
     let positionY = this.bg.position.y;
+
     if(this.playerSelectScreen) {
       if(drawWidth !== this.bg.width) {
-        drawWidth += Math.round(this.drawWidthDiff / FRAME * 10) / 10;
+        drawWidth = Math.round(drawWidth +  Math.round(this.drawWidthDiff / FRAME * 10) / 10);
         if(this.bg.width < drawWidth) drawWidth = this.bg.width;
         drawHeight = Math.round( this.bg.height * drawWidth / this.bg.width * 10) / 10;
         if(this.bg.height < drawHeight) drawHeight = this.bg.height;
         this.bg.updateDrawSize({width: drawWidth, height: drawHeight});
       }
       if(positionX !== this.offSet.x) {
-        positionX += Math.round( this.positionXDiff / FRAME * 10) / 10;
+        positionX = Math.round( (drawWidth - this.canvas.width) * this.offSet.x  / (this.bg.width - this.canvas.width) * 10) / 10;
         if(positionX < this.offSet.x) positionX = this.offSet.x;
-        positionY = Math.round( this.offSet.y * drawHeight / this.bg.height * 10) / 10;
+        positionY = Math.round( (drawHeight - this.canvas.height) * this.offSet.y  / (this.bg.height - this.canvas.height) * 10) / 10;
         if(positionY < this.offSet.y) positionY = this.offSet.y;
         this.bg.updatePosition({x: positionX, y: positionY});
       }
