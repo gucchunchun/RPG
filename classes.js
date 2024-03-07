@@ -1166,6 +1166,7 @@ class BattleUIManager {
     this.runOptUI.elem.disabled = true;
   }
   reset() {
+    this.closeItemWindow();
     this.fightOptUI.elem.checked = false;
     this.runOptUI.elem.checked = false;
     this.runOptUI.elem.disabled = false;
