@@ -29,7 +29,7 @@ body {
   width: 100dvw;
 }
 
-/* util */
+/* 汎用クラス */
 .option__label {
   align-items: center;
   display: flex;
@@ -42,6 +42,10 @@ input.option__input {
   height: 0;
   width: 0;
 }
+.option__label:has(input:checked) {
+  border: solid 3px rgba(255, 0, 0, 0.7);
+}
+
 
 /* キャンバス */
 .game-ctr {
@@ -136,7 +140,7 @@ input.option__input {
   background-color: #fff;
   border-radius: 10px;
 }
-.player-name-ctr {
+/* .player-name-ctr {
 
 }
 .player-name {
@@ -144,7 +148,7 @@ input.option__input {
 }
 .player-name__label {
 
-}
+} */
 
 /* マップシーン */
 .map-ctr {
