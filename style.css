@@ -160,10 +160,11 @@ input.option__input {
   width: 100%;
 }
 .map-side-ctr {
-  background-color: white;
+  /* background-color: white; */
   height: 100%;
   right: -20%;
   opacity: 0;
+  padding: calc(1px * var(--space));
   position: absolute;
   top: 0;
   width: 20%;
@@ -181,7 +182,7 @@ input.option__input {
   width: 100%;
 }
 .player-info--log__ctr {
-  height: calc(var(--fz--base) + var(--space)*2);
+  height: calc(var(--fz--base) + var(--space)*2px);
   overflow: scroll;
   width: 100%;
 }
@@ -194,15 +195,44 @@ input.option__input {
 
 .player-ctrl__ctr {
   aspect-ratio: 1;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   height: 30%;
   margin-inline: auto;
 }
 .player-ctrl {
-  height: 3rem;
-  width: 3rem;
+  background-color: transparent;
+  background-image: url('./img/triangle.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  border: none;
 }
 .player-ctrl span {
   display: none;
+}
+.player-ctrl--up {
+  grid-row: 1 / 2;
+  grid-column: 2 / 3;
+}
+.player-ctrl--down {
+  rotate: 180deg;
+  grid-row: 3 / 4;
+  grid-column: 2 / 3;
+}
+.player-ctrl--left {
+  rotate: -90deg;
+  grid-row: 2 / 3;
+  grid-column: 1 / 2;
+}
+.player-ctrl--right {
+  rotate: 90deg;
+  grid-row: 2 / 3;
+  grid-column: 3 / 4;
 }
 
 /* 戦闘シーン */
