@@ -42,7 +42,7 @@ function choiceRandom(array) {
   const RESULT = array[INDEX];
   return RESULT;
 }
-function addOption({parent, childList, multiAnswer, name, classList, itemsData}) {
+function addOption({parent, childList, multiAnswer, name, classList, itemDatabase}) {
   const NODE_LIST = [];
   let type = 'radio';
   if(multiAnswer) {
@@ -55,7 +55,7 @@ function addOption({parent, childList, multiAnswer, name, classList, itemsData})
     }
     LABEL.classList.add('option__label');
     const SPAN = document.createElement('span');
-    SPAN.innerHTML = itemsData? itemsData[child].name : child;
+    SPAN.innerHTML = itemDatabase? itemDatabase[child].name : child;
     LABEL.appendChild(SPAN);
     const INPUT = document.createElement('input');
     INPUT.id = child;

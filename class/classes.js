@@ -218,20 +218,21 @@ class Keys {
 class ItemCtr {
   constructor({elemId, itemDatabase}) {
     this.itemCtr = new UI(elemId);
-    this.itemDatabase = itemDatabase ;
+    this.itemDatabase = itemDatabase;
     this.itemList = [];
 
     EVENT_BUS.subscribe(EVENT.playerSelect, this.makeItemList.bind(this));
     EVENT_BUS.subscribe(EVENT.getItem, this.addItem.bind(this));
   }
   makeItemList({playerData}) {
+    console.log(playerData.item)
     this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
-      classList: ['item'], itemsData: this.itemDatabase })
+      classList: ['item'], itemDatabase: this.itemDatabase })
   }
   addItem({itemKey}) {
     this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [itemKey], 
-      multiAnswer: true, name: 'battleItem', classList: ['item'], itemsData : this.itemDatabase })[0]);
+      multiAnswer: true, name: 'battleItem', classList: ['item'], itemDatabase : this.itemDatabase })[0]);
   }
   getCheckedItemName() {
     const SELECTED = this.itemList.filter(item=>item.checked).map(item=>item.value);
@@ -601,14 +602,14 @@ class MapUICtr extends UICtr {
 }
 // バトル画面UI
 class BattleUICtr extends UICtr {
-  constructor({ctrId, bottomCtrId, fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemsData, transTime, styleSpace}) {
+  constructor({ctrId, bottomCtrId, fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, itemDatabase, transTime, styleSpace}) {
     super({ctrId, transTime, styleSpace});
     this.bottomCtrUI = new UI(bottomCtrId);
     this.fightOptUI = new UI(fightOptId);
     this.runOptUI = new UI(runOptId);
     this.itemWinUI = new UI(itemWinId);
     this.cocktailUI = new UI(cocktailId);
-    this.itemCtr = new ItemCtr({elemId:itemCtrId, itemsData: itemsData});
+    this.itemCtr = new ItemCtr({elemId:itemCtrId, itemDatabase: itemDatabase});
     this.itemSetBtnUI = new UI(itemSetBtnId);
 
     this._openItemWindowFunc = this._openItemWindow.bind(this); 
@@ -718,7 +719,7 @@ class UIManager {
     this.gameCtrUI = new UI(UIDatabase.game.ctrId);
     this.titleMgr = new TitleUICtr({...UIDatabase.title, playerDatabase: gameDatabase.player, transTime: transTime, styleSpace: styleSpace});
     this.mapMgr = new MapUICtr({...UIDatabase.map, transTime: transTime, styleSpace: styleSpace});
-    this.battleMgr = new BattleUICtr({...UIDatabase.battle, itemsData: gameDatabase.item, transTime: transTime, styleSpace: styleSpace});
+    this.battleMgr = new BattleUICtr({...UIDatabase.battle, itemDatabase: gameDatabase.item, transTime: transTime, styleSpace: styleSpace});
     this.overlap = new Overlap({gameCtrUI: this.gameCtrUI, transTime: transTime});
     this.gameDatabase = gameDatabase;
     this.transTime = transTime;
