@@ -58,6 +58,11 @@ const UI_MGR_INTERFACE = {
     titlePageCtrId: '', 
     titlePageBtnCtrId: '',
     startNewGameBtnId: '',
+    playerSelectCtrId: '', 
+    playerSexOptCtrId: '', 
+    playerNameId: '',
+    nameErrMsgId: '',
+    playerSetBtnId: '',
     prevData: null, 
   },
   map: {
@@ -74,18 +79,12 @@ const UI_MGR_INTERFACE = {
     ctrId: '', 
     fightOptId: '', 
     runOptId: '', 
+    dialogCtrId: '',
     itemWinId: '', 
     cocktailId: '', 
     itemCtrId: '', 
     itemSetBtnId: '', 
   }
-}
-
-const KEYS_INTERFACE = {
-  downKeyId: '', 
-  upKeyId: '', 
-  leftKeyId: '', 
-  rightKeyId: ''
 }
 
 
@@ -121,5 +120,11 @@ const EVENT = {
   run: 'run',
   failToRun: 'failToRun',
 }
+const KEYS_INTERFACE = {
+  downKeyId: '', 
+  upKeyId: '', 
+  leftKeyId: '', 
+  rightKeyId: ''
+}
 
-export { KEYS_INTERFACE,  UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };
+export {  KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT };

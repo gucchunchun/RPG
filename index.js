@@ -1,6 +1,6 @@
 import { fetchJsonData } from './fetchData.js';
 import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
-import { UIManager, MapUIManager , TitleUIManager, BattleUIManager, Log, UICount, Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, Keys, AverageEncounter } from './classes.js';
+import { UIManager, Log,  GameManager } from './class/classes.js';
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
 import { gsap } from './node_modules/gsap/index.js';
 
@@ -25,6 +25,11 @@ const UI_DATABASE = {
     titlePageCtrId: 'titlePageCtr', 
     titlePageBtnCtrId: 'titlePageBtnCtr',
     startNewGameBtnId: 'startNewGame',
+    playerSelectCtrId: 'playerSelectCtr', 
+    playerSexOptCtrId: 'playerSexOptCtr', 
+    playerNameId: 'playerName',
+    nameErrMsgId: 'nameErrMsg',
+    playerSetBtnId: 'playerSetBtn',
     prevData: PREV_DATA, 
   },
   map: {
@@ -42,8 +47,8 @@ const UI_DATABASE = {
     bottomCtrId: 'battleBottomCtr',
     fightOptId: 'fight', 
     runOptId: 'run', 
+    dialogCtrId: 'battleDialogCtr',
     itemWinId: 'battleItemWin', 
-    // dialog
     cocktailId: 'cocktail', 
     itemCtrId: 'battleItemCtr', 
     itemSetBtnId: 'itemSetBtn', 
@@ -56,36 +61,50 @@ const KEYS_ID = {
   rightKeyId: 'right'
 }
 
-fetchJsonData('./data/gameData.json')
-.then(json=>{
-  // ゲームデータ
-  const GAME_DATABASE = json.data;
+const LOADING_CTR = document.getElementById('loadingCtr');
+const ERROR_MSG = document.getElementById('errorMsg');
+const ROOT = document.querySelector(':root');
+ROOT.style.setProperty('--w--game', CANVAS_WIDTH);
+ROOT.style.setProperty('--h--game', CANVAS_HEIGHT);
+ROOT.style.setProperty('--space', SPACE);
 
-  // キャンバス
-  const CANVAS = document.getElementById('canvas');
-  const C = CANVAS.getContext('2d');
-  CANVAS.width = CANVAS_WIDTH;
-  CANVAS.height = CANVAS_HEIGHT;
-  C.fillRect(0, 0, CANVAS.width, CANVAS.height);
+let data;
 
-  // UI マネージャー
-  const UI_MANAGER = new UIManager({UIDatabase: UI_DATABASE, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, styleSpace: SPACE})
+const ERROR_TIMEOUT = new Promise((reject) =>
+  setTimeout(() => {
+    reject(new Error('reload'));
+  }, 5000)
+)
+try {
+  data = await Promise.race([fetchJsonData('./data/gameData.json'), ERROR_TIMEOUT]);
+}catch(err) {
+  if (err.message === 'reload') {
+    alert('リロードしてください');
+  }
+  ERROR_MSG.style.display = 'block';
+  throw new Error(err);
+}
 
-  const BATTLE_DIALOG = new Log({elemId: 'battleDialogCtr', className: 'battle-dialog', event: EVENT.battleDialog, clearEvent: EVENT.battleEnd});
+// ゲームデータ
+const GAME_DATABASE = data.data;
+// キャンバス
+const CANVAS = document.getElementById('canvas');
+const C = CANVAS.getContext('2d');
+CANVAS.width = CANVAS_WIDTH;
+CANVAS.height = CANVAS_HEIGHT;
+C.fillRect(0, 0, CANVAS.width, CANVAS.height);
+// UI マネージャー
+const UI_MANAGER = new UIManager({UIDatabase: UI_DATABASE, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, styleSpace: SPACE})
+const BATTLE_DIALOG = new Log({elemId: 'battleDialogCtr', className: 'battle-dialog', event: EVENT.battleDialog, clearEvent: EVENT.battleEnd});
+const GAME_MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, pathToImg: PATH_TO_CHAR_IMG, keysId: KEYS_ID});
 
-  const GAME_MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, pathToImg: PATH_TO_CHAR_IMG, keysId: KEYS_ID});
-  
-  // ゲームスタート
-  GAME_MANAGER.startTitleAnimation();
+// ゲームスタート
+GAME_MANAGER.startTitleAnimation();
+LOADING_CTR.style.display = 'none';
 
-  // リロードの禁止
-  window.addEventListener('beforeunload', (e)=> {
-    e.preventDefault();
-    console.log(MANAGER.player.data)
-    localStorage.setItem("prevData", JSON.stringify(MANAGER.player.data));
-  });
-
-})
-// .catch(error => {
-//   throw new Error(error);
-// });
+// リロードの禁止
+window.addEventListener('beforeunload', (e)=> {
+  e.preventDefault();
+  console.log(GAME_MANAGER.player.data)
+  localStorage.setItem("prevData", JSON.stringify(GAME_MANAGER.player.data));
+});

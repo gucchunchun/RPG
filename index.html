@@ -11,12 +11,27 @@
       <canvas id="canvas"></canvas>
       <div id="titleCtr" class="title-ctr">
         <div id="titlePageCtr" class="title-page__ctr">
-          <h1 class="titlePage__title">RPG</h1>
-          <div id="titlePageBtnCtr" class="titlePage__btn-ctr">
-            <button id="startNewGame" class="titlePage__btn">
+          <h1 class="title-page__title">RPG</h1>
+          <div id="titlePageBtnCtr" class="title-page__btn-ctr">
+            <button id="startNewGame" class="title-page__btn">
               新しくゲームを始める
             </button>
           </div>
+        </div>
+        <div id="playerSelectCtr" class="player-select-ctr">
+          <div id="playerSexOptCtr" class="player-sex-opt__ctr"></div>
+          <div class="player-name-ctr">
+            <label class="player-name__label">名前を決めてください</label>
+            <input
+              id="playerName"
+              name="playerName"
+              type="text"
+              minlength="1"
+              maxlength="10"
+            />
+          </div>
+          <p id="nameErrMsg" class="msg--err"></p>
+          <button id="playerSetBtn" class="player-set-btn">決めた！</button>
         </div>
       </div>
       <div id="mapCtr" class="map-ctr">
@@ -48,16 +63,16 @@
             </div>
           </dl>
           <div class="player-ctrl__ctr">
-            <button id="up" class="player-ctrl move--up">
+            <button id="up" class="player-ctrl player-ctrl--up">
               <span>up</span>
             </button>
-            <button id="left" class="player-ctrl move--left">
+            <button id="left" class="player-ctrl player-ctrl--left">
               <span>left</span>
             </button>
-            <button id="right" class="player-ctrl move--right">
+            <button id="right" class="player-ctrl player-ctrl--right">
               <span>right</span>
             </button>
-            <button id="down" class="player-ctrl move--down">
+            <button id="down" class="player-ctrl player-ctrl--down">
               <span>down</span>
             </button>
           </div>
@@ -96,6 +111,9 @@
             これで戦う！
           </button>
         </div>
+      </div>
+      <div id="loadingCtr" class="loading-ctr">
+        <p id="errorMsg" class="msg--err">エラー発生</p>
       </div>
     </div>
     <script type="module" src="index.js"></script>

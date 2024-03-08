@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap');
+
 :root {
-  --h--game:  576;
   --w--game: 1024;
-  --space: 8px;
-  --battle-ctr--height: 30%;
+  --h--game:  576;
+  --space: 8;
   --fz--base: 24px;
   --fz--big: 32px;
   --fz--small: 16px;
@@ -11,6 +12,7 @@
 
 * {
   box-sizing: border-box;
+  font-family: inherit;
   margin: 0;
   padding: 0;
 }
@@ -19,12 +21,15 @@ body {
   background-color: rgba(50, 50, 50, 1);
   display: flex;
   font-size: var(--fz--base);
+  font-family: "Dela Gothic One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
   height: 100dvh;
   justify-content: center;
   width: 100dvw;
 }
 
-/* util */
+/* 汎用クラス */
 .option__label {
   align-items: center;
   display: flex;
@@ -37,13 +42,17 @@ input.option__input {
   height: 0;
   width: 0;
 }
+.option__label:has(input:checked) {
+  border: solid 3px rgba(255, 0, 0, 0.7);
+}
+
 
 /* キャンバス */
 .game-ctr {
   height: calc(var(--h--game) * 1px);
   overflow: hidden;
   position: relative;
-  width: calc(var(--1--game) * 1px);
+  width: calc(var(--w--game) * 1px);
   margin: auto;
 }
 
@@ -74,7 +83,7 @@ input.option__input {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   left: 0;
@@ -87,48 +96,51 @@ input.option__input {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   width: 100%;
 }
-.titlePage__title {
+.title-page__title {
   font-size: var(--fz--title);
   flex: 0 0 auto;
-  height: var(--fz--title);
   text-align: center;
   width: 100%;
 }
-.titlePage__btn-ctr {
+.title-page__btn-ctr {
   align-items: center;
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   flex-direction: column;
   justify-content: center;
   width: 50%;
 }
-.titlePage__btn {
+.title-page__btn {
+
   width: 50%;
 }
 .player-select-ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 100%;
   justify-content: center;
   right: 0;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   position: absolute;
   top: 0;
   width: 20%;
 }
 .player-sex-opt__ctr {
-
-}
+  display: flex;
+  flex-direction: column;
+  gap: calc(1px * var(--space));
+} 
 .player-sex-opt {
-
+  background-color: #fff;
+  border-radius: 10px;
 }
-.player-name-ctr {
+/* .player-name-ctr {
 
 }
 .player-name {
@@ -136,11 +148,10 @@ input.option__input {
 }
 .player-name__label {
 
-}
+} */
 
 /* マップシーン */
 .map-ctr {
-  display: none;
   height: 100%;
   left: 0;
   position: absolute;
@@ -148,10 +159,11 @@ input.option__input {
   width: 100%;
 }
 .map-side-ctr {
-  background-color: white;
+  /* background-color: white; */
   height: 100%;
-  right: -20%;
-  opacity: 0;
+  right: 0;
+  opacity: 1;
+  padding: calc(1px * var(--space));
   position: absolute;
   top: 0;
   width: 20%;
@@ -169,33 +181,62 @@ input.option__input {
   width: 100%;
 }
 .player-info--log__ctr {
-  height: calc(var(--fz--base) + var(--space)*2);
+  height: calc(var(--fz--base) + var(--space)*2px);
   overflow: scroll;
   width: 100%;
 }
 .playerInfo--log {
   height: var(--fz--base);
   line-height: var(--fz--base);
-  margin-block: var(--space);
+  margin-block: calc(1px * var(--space));
   white-space: nowrap;
 }
 
 .player-ctrl__ctr {
   aspect-ratio: 1;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   height: 30%;
   margin-inline: auto;
 }
 .player-ctrl {
-  height: 3rem;
-  width: 3rem;
+  background-color: transparent;
+  background-image: url('./img/triangle.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  border: none;
 }
 .player-ctrl span {
   display: none;
 }
+.player-ctrl--up {
+  grid-row: 1 / 2;
+  grid-column: 2 / 3;
+}
+.player-ctrl--down {
+  rotate: 180deg;
+  grid-row: 3 / 4;
+  grid-column: 2 / 3;
+}
+.player-ctrl--left {
+  rotate: -90deg;
+  grid-row: 2 / 3;
+  grid-column: 1 / 2;
+}
+.player-ctrl--right {
+  rotate: 90deg;
+  grid-row: 2 / 3;
+  grid-column: 3 / 4;
+}
 
 /* 戦闘シーン */
 .battle-ctr {
-  display: none;
+  display: flex;
   height: 100%;
   left: 0;
   position: absolute;
@@ -205,20 +246,20 @@ input.option__input {
 .battle--bottom-ctr {
   border: solid 5px #fff;
   border-collapse: collapse;
-  bottom: -30%;
+  bottom: calc(1px * var(--space));
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   height: 30%;
   left: 50%;
   position: absolute;
   transform: translateX(-50%);
-  width: calc(100% - var(--space) * 2);
-  padding: var(--space);
+  width: calc(100% - var(--space) * 2px);
+  padding: calc(1px * var(--space));
 }
 .battleーact-opt__ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   justify-content: space-evenly;
   width: 30%;
 }
@@ -237,10 +278,11 @@ input.option__input {
 .battle-dialog__ctr {
   display: flex;
   flex-direction: column;
-  gap: var(--space);
+  flex: 1 0 auto;
+  gap: calc(1px * var(--space));
   justify-content: flex-start;
   overflow: scroll;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
 }
 .battle-dialog {
   width: 100%;
@@ -249,13 +291,13 @@ input.option__input {
 .battleーitem-win {
   align-items: center;
   background-color: rgba(255, 255, 255, 0.5);
-  display: none;
+  display: flex;
   flex-direction: column;
-  gap: var(--space);
-  height: calc(100% - var(--battle-ctr--height) - var(--space) * 3);
-  top: var(--space);
+  gap: calc(1px * var(--space));
+  height: calc(70% - var(--space) * 3px);
+  top: calc(1px * var(--space));
   left: 50%;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   position: absolute;
   transform: translate(-50%, 0%);
   width: 70%;
@@ -265,21 +307,37 @@ input.option__input {
 }
 .battleーitem__ctr {
   display: flex;
-  gap: var(--space);
+  gap: calc(1px * var(--space));
   flex: 1 0 auto;
   flex-wrap: wrap;
-  padding: var(--space);
+  padding: calc(1px * var(--space));
   width: 100%;
 }
 .button--set-battle-item {
   height: var(--fz--big);
-  line-height: var(--fz--big);
 }
 
 .item {
   background-color: rgba(255, 255, 255, 0.5);
-  flex: 0 1 calc((100% - var(--space) * 4) / 5);
+  flex: 0 1 calc((100% - var(--space) * 4px) / 5);
 }
 .item:has(input:checked){
   border: solid 3px rgba(255, 0, 0, 0.7);
+}
+
+.loading-ctr {
+  align-items: center;
+  background-color: #fff;
+  display: flex;
+  height: calc(var(--h--game) * 1px);
+  left: 50%;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--w--game) * 1px);
+}
+.msg--err {
+  display: none;
+  color: red;
 }
