@@ -24,6 +24,10 @@ class UICount extends UI {
     this.num = initNum || 0;
     this.setValue(this.num);
   }
+  setValue(value) {
+    this.num = value;
+    super.setValue(value);
+  }
   countUp(amount) {
     this.setValue(amount? this.num + amount: this.num + 1);
   }
@@ -57,22 +61,11 @@ class AverageEncounter extends UI {
   }
 }
 class Log extends UI {
-  constructor({elemId, className, event, dataKey, showKey, clearEvent}) {
+  constructor(elemId, className) {
     super(elemId);
     this.className = className;
-    this.event = event;
-    this.dataKey = dataKey;
-    this.showKey = showKey;
-    this.logList = [];
-    if(event) {
-      EVENT_BUS.subscribe(this.event, this.addLog.bind(this));
-    }
-    if(clearEvent) {
-      EVENT_BUS.subscribe(clearEvent, this.clearLog.bind(this));
-    }
   }
-  addLog({log, delay}) {
-    if(!log) return;
+  addLog(log) {
     const P = document.createElement('p');
     P.className = this.className;
     P.innerHTML = log;
@@ -84,7 +77,6 @@ class Log extends UI {
       return;
     }
     this.elem.append(P);
-    this.logList.push(log);
     scrollToBottom(this.elem);
   }
   setLog(logList) {
@@ -334,8 +326,6 @@ class UICtr {
     )
   }
 }
-// タイトル画面UI
-// クローズするタイミング
 class TitleUICtr extends UICtr {
   static BTN_CLASS = 'title-page__btn';
   static PLAYER_SEX_OPT = 'player-sex-opt';
@@ -505,7 +495,6 @@ class TitleUICtr extends UICtr {
     this.nameErrMsgUI.elem.innerHTML = msg;
   }
 }
-// マップ画面UI
 class MapUICtr extends UICtr {
   static ENC_LOG_CLASS = 'playerInfo--log';
   constructor({ctrId, gameDatabase, sideCtrId, lvId, hpId, stepId, beatId, avgEncId, encLogCtrId, transTime, styleSpace}) {
@@ -516,16 +505,15 @@ class MapUICtr extends UICtr {
     this.stepCount = new UICount(stepId);
     this.beatCount = new UICount(beatId);
     this.avgEncCount = new AverageEncounter(avgEncId);
-    this.encLog = new Log({elemId: encLogCtrId, className: MapUICtr.ENC_LOG_CLASS, dataKey: 'enemy', showKey: ['data', 'name']});
+    this.encLog = new Log(encLogCtrId, MapUICtr.ENC_LOG_CLASS);
     this.init();
-    // イベント登録
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.playerSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
     EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
-    EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
-    EVENT_BUS.subscribe(EVENT.step, this.step.bind(this));
-    EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
-    EVENT_BUS.subscribe(EVENT.beat, this.beat.bind(this));
-    EVENT_BUS.subscribe(EVENT.encounter, this.encounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
+    EVENT_BUS.subscribe(EVENT.step, this.handleStep.bind(this));
+    EVENT_BUS.subscribe(EVENT.recoverHp, this.handleRecoverHp.bind(this));
+    EVENT_BUS.subscribe(EVENT.beat, this.handleBeat.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
   }
   init() {
     this._closeCtr();
@@ -541,7 +529,7 @@ class MapUICtr extends UICtr {
       this._closeCtr();
     }, this.transTime)
   }
-  playerSelect({playerData}) {
+  handlePlayerSelect({playerData}) {
     this.lvCount.setValue(playerData.lv);
     this.hpCount.setValue(playerData.hp);
     this.beatCount.setValue(playerData.beat);
@@ -555,22 +543,24 @@ class MapUICtr extends UICtr {
     const ENEMY_LIST = ENEMY_LOG.map(enemyKey => ENEMY_DATABASE[enemyKey].name);
     this.encLogCount.setLog(ENEMY_LIST);
   }
-  levelUp({lv}) {
+  handleLevelUp({lv}) {
     this.lvCount.setValue(lv);
   }
-  step() {
+  handleStep() {
+    console.log('step')
     this.stepCount.countUp();
     this.avgEncCount.countUpStep();
   }
-  recoverHp({amount}) {
+  handleRecoverHp({amount}) {
     this.hpCount.countUp(amount);
   }
-  beat() {
+  handleBeat() {
     this.beatCount.countUp();
   }
-  encounter({enemy}) {
+  handleEncounter({enemyKey}) {
     this.mapEnd();
     this.avgEncCount.countUpEncounter();
+    this.encLog.addLog(this.gameDatabase.enemy[enemyKey].name);
   }
   _openSideCtr() {
     gsap.fromTo(this.sideCtrUI.elem, 
@@ -597,11 +587,12 @@ class MapUICtr extends UICtr {
 }
 // バトル画面UI
 class BattleUICtr extends UICtr {
-  constructor({ctrId, gameDatabase, bottomCtrId, fightOptId, runOptId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, transTime, styleSpace}) {
+  constructor({ctrId, gameDatabase, bottomCtrId, fightOptId, runOptId, diaLogCtrId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, transTime, styleSpace}) {
     super({ctrId, gameDatabase, transTime, styleSpace});
     this.bottomCtrUI = new UI(bottomCtrId);
     this.fightOptUI = new UI(fightOptId);
     this.runOptUI = new UI(runOptId);
+    this.diaLogCtrUI = new Log(diaLogCtrId);
     this.itemWinUI = new UI(itemWinId);
     this.cocktailUI = new UI(cocktailId);
     this.itemCtr = new ItemCtr(itemCtrId, gameDatabase.item);
@@ -615,6 +606,7 @@ class BattleUICtr extends UICtr {
     this.runOptUI.elem.addEventListener('click', this.runFunc);
     this.itemSetBtnUI.elem.addEventListener('click', this.handleItemSetBtnClick.bind(this));
 
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
     EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
     EVENT_BUS.subscribe(EVENT.battleReady, this.handleBattleReady.bind(this));
     this.init();
@@ -626,6 +618,19 @@ class BattleUICtr extends UICtr {
     this.fightOptUI.elem.checked = false;
     this.runOptUI.elem.checked = false;
     this.runOptUI.elem.disabled = false;
+  }
+  handleEncounter({enemyKey}){
+    setTimeout(() => {
+      this._openCtr();
+      this._openBottomCtr();
+      const ENEMY = this.gameDatabase.enemy[enemyKey];
+      setTimeout(() => {
+        this.diaLogCtrUI.addLog(`${ENEMY.name}が現れた`);
+        setTimeout(()=> {
+          this.diaLogCtrUI.addLog(`${ENEMY.cocktail.name}が現れた`);
+        }, this.transTime)
+      }, this.transTime)
+    }, this.transTime)
   }
 
   handleBattleReady({cocktail}) {
@@ -1272,7 +1277,6 @@ class MapAnimation extends Animation {
             if(RESULT) {
               this.nap.lastTime = this.currTime;
               this.nap.lastIndex = i;
-              console.log(RESULT.amount)
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
               return;
             };
@@ -1296,9 +1300,9 @@ class MapAnimation extends Animation {
         console.log('battle');
         this.player.stop();
         this.keys.lastKey = undefined;
-        // 通常アニメーション停止
-        // this.stopCurrAnimation();
-        EVENT_BUS.publish(EVENT.encounter, {});
+        this.action.lastTime = new Date().getTime();
+        const ENEMY_KEY = choiceRandom(this.enemyList);
+        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyKey: ENEMY_KEY});
       }
     }
   }
@@ -1331,35 +1335,9 @@ class BattleAnimation extends Animation {
   static BG_FRAME = 1;
   static BG_MOVING = false;
   static PLAYER_IMG_SRC = 'mainMBack.png';
+  static ENEMY_IMG_SRC = 'skeletonFront.png';
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
-    this.bg;
-    this.player;
-    this.enemy;
-    this.enemyList = [];
-    this.init();
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.addEnemyList.bind(this));
-    EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
-    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
-    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
-  }
-  addEnemyList({lv, playerData}) {
-    if(lv) {
-      // enemyDataで管理
-      for(let enemy of this.gameDatabase.enemy[lv]) {
-        this.enemyList.push(enemy);
-      }
-      return;
-    }
-    if(playerData) {
-      for(let enemy of this.gameDatabase.enemy[playerData.lv]) {
-        this.enemyList.push(enemy);
-      }
-      return;
-    }
-    throw new Error('Error at playerSelect / levelUp Event: lv or playerData not found')
-  }
-  init() {
     // 固定背景
     const IMG_BG = new Image();
     this.bg = new Sprite({
@@ -1374,7 +1352,6 @@ class BattleAnimation extends Animation {
       moving: BattleAnimation.BG_MOVING
     });
     IMG_BG.src = BattleAnimation.BG_SRC;
-
     // プレイヤー
     const IMG_PLAYER = new Image();
     this.player = new CharacterBattle({
@@ -1386,27 +1363,32 @@ class BattleAnimation extends Animation {
       bottom: Math.round(this.canvas.height * 0.3 * 10) / 10
     });
     IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
-  }
-  animate(playerData) {
-    this.player.updateData(playerData);
-
-    const ENEMY_DATA = {...choiceRandom(this.enemyList)};
     // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_ENEMY,
-      data: ENEMY_DATA,
+      data: ENEMY_DATA_TYPE,
       isPlayer: false,
       pathToImg: this.pathToImg,
     });
-    IMG_ENEMY.src = this.pathToImg + ENEMY_DATA.image.down;
-    const COCKTAIL = ENEMY_DATA.cocktail.name;
-    EVENT_BUS.publish(EVENT.battleReady, {cocktail: COCKTAIL})
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.name}が現れた`, delay: 1000});
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${COCKTAIL}を飲みたそうにしている`, delay: 1500});
-    super.animate();
+    IMG_ENEMY.src = this.pathToImg + BattleAnimation.ENEMY_IMG_SRC;
+
+    EVENT_BUS.subscribe(EVENT.encounter, this.animate.bind(this));
+    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
+    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this));
+
+    this.init();
+  }
+  init() {
+  }
+  animate({playerData, enemyKey}) {
+    if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
+    if(!this.enemy.updateData(this.gameDatabase.enemy[enemyKey])) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
+    setTimeout(() => {
+      super.animate();
+    }, this.transTime)
   }
   _update() {
     // console.log('update')
