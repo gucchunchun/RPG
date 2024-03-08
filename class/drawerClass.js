@@ -405,21 +405,6 @@ class CharacterBattle extends Character {
     if(!this.hp.recoverHp(amount)) return false;
     return RESULT;
   }
-  updateRecords({won, enemy}) {
-    if(!this.data.enemy) {
-      console.log('this.data.enemy does not exist');
-      return false;
-    }
-    this.data.enemy.push(enemy);
-    if(won) {
-      if(isNaN(this.data.beat)) {
-        console.log('this.data.encounter is not number. It possibly does not exist');
-        return false;
-      }
-      this.data.beat++;
-    }
-    return true;
-  }
   run() {
     if(trueWithRatio(this.data.rateRun)) {
       this.succeedRun = true;
@@ -434,6 +419,9 @@ class CharacterBattle extends Character {
       return true;
     }
     return false;
+  }
+  addEnemyLog(enemyKey) {
+    this.data.enemy.push(enemyKey);
   }
 }
 
