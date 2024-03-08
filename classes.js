@@ -887,7 +887,7 @@ class TitleUIManager {
     this.prevData = prevData;
     this.playerDatabase = playerDatabase;
     this.transTime = transTime;
-    this.playerSelectScreen;
+    this.playerSelectPage;
     this.name;
     this.nameError;
     this.playerSetBtn;
@@ -951,7 +951,7 @@ class TitleUIManager {
 
     PLAYER_SELECT_CTR.style.display = 'none';
     this.ctrUI.elem.appendChild(PLAYER_SELECT_CTR);
-    this.playerSelectScreen = PLAYER_SELECT_CTR;
+    this.playerSelectPage = PLAYER_SELECT_CTR;
   }
   handleStartBtnClick() {
     EVENT_BUS.publish(EVENT.newGameStart);
@@ -982,20 +982,20 @@ class TitleUIManager {
   }
   closePlayerSelectScreen() {
     gsap.timeline()
-    .to(this.playerSelectScreen, 
+    .to(this.playerSelectPage, 
       {
         display: 'flex',
         opacity: 1,
       }
     )
-    .to(this.playerSelectScreen, 
+    .to(this.playerSelectPage, 
       {
         display: 'flex',
         opacity: 0,
         duration: this.transTime / 1000
       }
     , 0)
-    .set(this.playerSelectScreen, 
+    .set(this.playerSelectPage, 
       {
         display: 'none',
         opacity: 0,
@@ -1004,13 +1004,13 @@ class TitleUIManager {
   }
   openPlayerSelectScreen() {
     gsap.timeline()
-    .set(this.playerSelectScreen, 
+    .set(this.playerSelectPage, 
       {
         display: 'flex',
         opacity: 0,
       }
     )
-    .to(this.playerSelectScreen, 
+    .to(this.playerSelectPage, 
       {
         display: 'flex',
         opacity: 1,
@@ -1026,7 +1026,7 @@ class TitleUIManager {
   }
   handleSexSelect(e) {
     const SELECTED_KEY =  e.target.value;
-    EVENT_BUS.publish(EVENT.playerSetSex, {key: SELECTED_KEY})
+    EVENT_BUS.publish(EVENT.playerSetCharacter, {key: SELECTED_KEY})
   }
   handleInputName(e) {
     const VALUE = e.target.value;
@@ -1292,6 +1292,8 @@ class GameManager {
     this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
     this.mapAnimation;
 
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+
     EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.recoverHp, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.loseHp, this.showFullMsg.bind(this));
@@ -1299,7 +1301,6 @@ class GameManager {
     EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
   }
   handlePlayerSelect({playerData}) {
     const PLAYER_SPRITES = {};
@@ -1411,36 +1412,11 @@ class TittleAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
-  constructor({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime}) {
-    super({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime});
-    this.bg;
-    this.player;
-    this.playerSelectScreen = false;
-    this.positionXDiff;
-    this.positionYDiff;
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
+    this.playerSelectPage = false;
     this.drawWidthDiff;
     this.drawHeightDiff;
-
-    EVENT_BUS.subscribe(EVENT.newGameStart, ()=>{
-      this.playerSelectScreen = true
-    })
-    EVENT_BUS.subscribe(EVENT.playerSetSex, this.setSex.bind(this));
-    EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
-    this.init();
-  }
-  setSex({key}) {
-    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
-    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
-    this.player.updateData(NEW_PLAYER_DATA);
-  }
-  setName({name}) {
-    if(!this.player.editData({key: 'name', newValue: name})) {
-      throw new Error('Error at editData in Character class');
-    }
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
-  }
-  init() {
-    // 固定背景の作成
     const IMG_BG = new Image();
     this.bg = new Sprite({
       canvas: this.canvas,
@@ -1454,11 +1430,8 @@ class TittleAnimation extends Animation {
       moving: TittleAnimation.BG_MOVING,
     });
     IMG_BG.src = TittleAnimation.BG_SRC;
-    this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
     this.positionXDiff = this.offSet.x - this.bg.position.x;
     this.positionYDiff = this.offSet.y - this.bg.position.y;
-    this.drawWidthDiff = IMG_BG.width / TittleAnimation.BG_FRAME - this.canvas.width;
-    this.drawHeightDiff = IMG_BG.height - this.canvas.height;
     const PLAYER_IMG = new Image();
     this.player = new Player({
       canvas: this.canvas,
@@ -1470,30 +1443,60 @@ class TittleAnimation extends Animation {
       image: PLAYER_IMG,
       moving: true,
       movementDelay: 10,
-      data: {...this.gameDatabase.player.male},
+      data: {...PLAYER_DATA_TYPE},
       pathToImg: this.pathToImg,
     })
     PLAYER_IMG.src = this.pathToImg + this.gameDatabase.player.male.image.down;
+
+    EVENT_BUS.subscribe(EVENT.newGameStart, ()=>{
+      this.playerSelectPage = true
+    })
+    EVENT_BUS.subscribe(EVENT.playerSetCharacter, this.handleSetCharacter.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
+    this.init();
+  }
+  init() {
+    this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
+    this.bg.updatePosition({x: 0, y: 0});
+  }
+  handleSetCharacter({key}) {
+    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
+    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
+    this.player.updateData(NEW_PLAYER_DATA);
+  }
+  setName({name}) {
+    if(!this.player.editData({key: 'name', newValue: name})) {
+      throw new Error('Error at editData in Character class');
+    }
+    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
+  }
+  handlePlayerSelect() {
+    this.stopCurrAnimation();
   }
   _update() {
+    while(!this.drawWidthDiff || !this.drawHeightDiff) {
+      this.drawWidthDiff = this.bg.width  - this.canvas.width;
+      this.drawHeightDiff = this.bg.height - this.canvas.height;
+    }
     const FRAME = Math.round(this.transTime / this.frameInterval * 10) / 10;
 
     let drawWidth = this.bg.drawWidth;
     let drawHeight = this.bg.drawHeight;
     let positionX = this.bg.position.x;
     let positionY = this.bg.position.y;
-    if(this.playerSelectScreen) {
+
+    if(this.playerSelectPage) {
       if(drawWidth !== this.bg.width) {
-        drawWidth += Math.round(this.drawWidthDiff / FRAME * 10) / 10;
+        drawWidth = Math.round(drawWidth +  Math.round(this.drawWidthDiff / FRAME * 10) / 10);
         if(this.bg.width < drawWidth) drawWidth = this.bg.width;
         drawHeight = Math.round( this.bg.height * drawWidth / this.bg.width * 10) / 10;
         if(this.bg.height < drawHeight) drawHeight = this.bg.height;
         this.bg.updateDrawSize({width: drawWidth, height: drawHeight});
       }
       if(positionX !== this.offSet.x) {
-        positionX += Math.round( this.positionXDiff / FRAME * 10) / 10;
+        positionX = Math.round( (drawWidth - this.canvas.width) * this.offSet.x  / (this.bg.width - this.canvas.width) * 10) / 10;
         if(positionX < this.offSet.x) positionX = this.offSet.x;
-        positionY = Math.round( this.offSet.y * drawHeight / this.bg.height * 10) / 10;
+        positionY = Math.round( (drawHeight - this.canvas.height) * this.offSet.y  / (this.bg.height - this.canvas.height) * 10) / 10;
         if(positionY < this.offSet.y) positionY = this.offSet.y;
         this.bg.updatePosition({x: positionX, y: positionY});
       }
@@ -1501,7 +1504,7 @@ class TittleAnimation extends Animation {
   }
   _render() {
     this.bg.draw();
-    if(!this.playerSelectScreen || this.bg.drawWidth !== this.bg.width || this.bg.position.x !== this.offSet.x) return;
+    if(!this.playerSelectPage || this.bg.drawWidth !== this.bg.width || this.bg.position.x !== this.offSet.x) return;
     this.player.draw();
   } 
   
@@ -1515,7 +1518,7 @@ class MapAnimation extends Animation {
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime, player}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.player = player;
-    this.listMovable = [];
+    this.enemyList = [];
     this.itemList = [];
     this.action = {
       lastTime: 0,
@@ -1536,32 +1539,6 @@ class MapAnimation extends Animation {
       lastTime: 0,
       interval: MapAnimation.MAP_EVENT_INTERVAL
     }
-    // 衝突検出用マップ
-    this.boundaryMap;
-    this.pathMap;
-    this.forestMap;
-    this.itemMap;
-    this.waterMap;
-    this.napMap;
-    // 固定背景
-    this.bg;
-    this.bgMoving = MapAnimation.BG_MOVING;
-    this.fg;
-    this.init();
-
-    EVENT_BUS.subscribe(EVENT.levelUp, this.makeListItem.bind(this));
-  }
-  makeListItem({lv}) {
-    if(!lv) throw new Error('Error at levelUp Event: lv is not found');
-    // keyで管理
-    const ITEM_DATABASE = this.gameDatabase.item;
-    for(let key in ITEM_DATABASE) {
-      if(ITEM_DATABASE[key].lv === lv) {
-        this.itemList.push(key);
-      }
-    }
-  }
-  init() {
     // 衝突検出用マップの作成
     this.boundaryMap = makeMap({array: COLLISION, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.pathMap = makeMap({array: PATH, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
@@ -1569,7 +1546,6 @@ class MapAnimation extends Animation {
     this.itemMap = makeMap({array: ITEM, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.waterMap = makeMap({array: WATER, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.napMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
-
     // 固定背景の作成
     const IMG_BG = new Image();
     this.bg = new Sprite({
@@ -1595,11 +1571,55 @@ class MapAnimation extends Animation {
       image: IMG_FG_OBJ
     });
     IMG_FG_OBJ.src = MapAnimation.FG_SRC;
-
-    this.makeListItem({lv: this.player.data.lv})
-
     // プレイヤーの動きに合わせて動かす物
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
+
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
+    EVENT_BUS.subscribe(EVENT.mapStart, this.handleMapStart.bind(this));
+  }
+  init() {
+    // reset
+    this.enemyList = [];
+    this.itemList = [];
+    this.action.lastTime = 0;
+    this.item.lastTime = 0;
+    this.water.lastTime = 0;
+    this.nap.lastTime = 0;
+  }
+  handlePlayerSelect(playerData) {
+    this._makeEnemyList(playerData.lv);
+    this._makeItemList(playerData.lv);
+  } 
+  handleMapStart() {
+    super.animate();
+  }
+  handleLevelUp(lv) {
+    this._makeEnemyList(lv);
+    this._makeItemList(lv);
+  }
+  _makeEnemyList(lv) {
+      const ENEMY_DATABASE = this.gameDatabase.enemy;
+      for(let key in ENEMY_DATABASE) {
+        if(!this.enemyList) {
+          // ゲームスタート時
+          if(ENEMY_DATABASE[key].lv <= lv) {
+            this.enemyList.push(key);
+          }
+        }else {
+          if(ENEMY_DATABASE[key].lv === lv) {
+            this.enemyList.push(key);
+          }
+        }
+      }
+  }
+  _makeItemList(lv) {
+      const ITEM_DATABASE = this.gameDatabase.item;
+      for(let key in ITEM_DATABASE) {
+        if(ITEM_DATABASE[key].lv === lv) {
+          this.itemList.push(key);
+        }
+      }
   }
   _update() {
     // アニメーションのアップデート
@@ -1785,9 +1805,9 @@ class MapAnimation extends Animation {
         console.log('battle');
         this.player.stop();
         this.keys.lastKey = undefined;
-        // 通常アニメーション停止
-        // this.stopCurrAnimation();
-        EVENT_BUS.publish(EVENT.encounter, {});
+        this.action.lastTime = new Date().getTime();
+        const ENEMY_KEY = choiceRandom(this.enemyList);
+        EVENT_BUS.publish(EVENT.encounter, {playerData: this.playerData, enemyKey: ENEMY_KEY});
       }
     }
   }
@@ -1820,35 +1840,9 @@ class BattleAnimation extends Animation {
   static BG_FRAME = 1;
   static BG_MOVING = false;
   static PLAYER_IMG_SRC = 'mainMBack.png';
+  static ENEMY_IMG_SRC = 'skeletonFront.png';
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
-    this.bg;
-    this.player;
-    this.enemy;
-    this.enemyList = [];
-    this.init();
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.addEnemyList.bind(this));
-    EVENT_BUS.subscribe(EVENT.levelUp, this.addEnemyList.bind(this));
-    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
-    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
-  }
-  addEnemyList({lv, playerData}) {
-    if(lv) {
-      // enemyDataで管理
-      for(let enemy of this.gameDatabase.enemy[lv]) {
-        this.enemyList.push(enemy);
-      }
-      return;
-    }
-    if(playerData) {
-      for(let enemy of this.gameDatabase.enemy[playerData.lv]) {
-        this.enemyList.push(enemy);
-      }
-      return;
-    }
-    throw new Error('Error at playerSelect / levelUp Event: lv or playerData not found')
-  }
-  init() {
     // 固定背景
     const IMG_BG = new Image();
     this.bg = new Sprite({
@@ -1863,39 +1857,42 @@ class BattleAnimation extends Animation {
       moving: BattleAnimation.BG_MOVING
     });
     IMG_BG.src = BattleAnimation.BG_SRC;
-
-    // プレイヤー
     const IMG_PLAYER = new Image();
     this.player = new CharacterBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_PLAYER,
-      data: PLAYER_DATA_TYPE,
+      data: {...PLAYER_DATA_TYPE},
       pathToImg: this.pathToImg,
       bottom: Math.round(this.canvas.height * 0.3 * 10) / 10
     });
     IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
-  }
-  animate(playerData) {
-    this.player.updateData(playerData);
-
-    const ENEMY_DATA = {...choiceRandom(this.enemyList)};
-    // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_ENEMY,
-      data: ENEMY_DATA,
+      data: {...ENEMY_DATA_TYPE},
       isPlayer: false,
       pathToImg: this.pathToImg,
     });
-    IMG_ENEMY.src = this.pathToImg + ENEMY_DATA.image.down;
-    const COCKTAIL = ENEMY_DATA.cocktail.name;
-    EVENT_BUS.publish(EVENT.battleReady, {cocktail: COCKTAIL})
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${ENEMY_DATA.name}が現れた`, delay: 1000});
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${COCKTAIL}を飲みたそうにしている`, delay: 1500});
-    super.animate();
+    IMG_ENEMY.src = this.pathToImg + BattleAnimation.ENEMY_IMG_SRC;
+
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
+    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this))
+    this.init();
+  }
+  init() {
+
+  }
+  handleEncounter({playerData, enemyData}) {
+    if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
+    if(!this.enemy.updateData(enemyData)) throw new Error('Fail to Update Enemy Data at BattleAnimation.animate');
+  
+    setTimeout(() => {
+      super.animate();
+    })
   }
   _update() {
     // console.log('update')

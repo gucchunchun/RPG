@@ -85,8 +85,6 @@ try {
   throw new Error(err);
 }
 
-console.log(PREV_DATA)
-
 // ゲームデータ
 const GAME_DATABASE = data.data;
 // キャンバス
