@@ -27,7 +27,6 @@ class UICount extends UI {
   setValue(value) {
     this.num = value;
     super.setValue(value);
-    console.log(this.elem)
   }
   countUp(amount) {
     this.setValue(amount? this.num + amount: this.num + 1);
@@ -574,11 +573,11 @@ class MapUICtr extends UICtr {
     this.stepCount.setValue(STEP);
     const ENEMY_DATABASE = this.gameDatabase.enemy;
     const ENEMY_LOG = playerData.enemy;
-    const NUM_ENCOUNTER = ENEMY_LOG.length;
-    this.avgEncCount.setStepEncounter(STEP, NUM_ENCOUNTER);
-    if(NUM_ENCOUNTER === 0) return;
+    const ENCOUNTER = ENEMY_LOG.length;
+    this.avgEncCount.setStepEncounter(STEP, ENCOUNTER);
+    if(ENCOUNTER === 0) return;
     const ENEMY_LIST = ENEMY_LOG.map(enemyKey => ENEMY_DATABASE[enemyKey].name);
-    this.encLogCount.setLog(ENEMY_LIST);
+    this.encLog.setLog(ENEMY_LIST);
   }
   _mapStart() {
     setTimeout(() => {
@@ -1379,7 +1378,9 @@ class MapAnimation extends Animation {
         this.keys.lastKey = undefined;
         this.action.lastTime = new Date().getTime();
         const ENEMY_KEY = choiceRandom(this.enemyList);
-        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData:this.gameDatabase.enemy[ENEMY_KEY]});
+        this.player.data.enemy.push(ENEMY_KEY);
+        console.log(this.player.data)
+        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: this.gameDatabase.enemy[ENEMY_KEY]});
       }
     }
   }
@@ -1457,7 +1458,6 @@ class BattleAnimation extends Animation {
   handleEncounter({playerData, enemyData}) {
     if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
     if(!this.enemy.updateData(enemyData)) throw new Error('Fail to Update Enemy Data at BattleAnimation.animate');
-    // 敵のデータ追加
     
     setTimeout(() => {
       console.log('battle animation');
