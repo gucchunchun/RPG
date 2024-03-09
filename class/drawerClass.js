@@ -140,6 +140,8 @@ class Character extends Sprite {
     }
   }
   updateImg(src) {
+    this.width = undefined;
+    this.height = undefined;
     // image.downが正面を向いたキャラクター画像
     const SRC = (src?src:this.pathToImg + this.data.image.down);
     const IMAGE = new Image();
@@ -180,6 +182,12 @@ class Character extends Sprite {
     this.data.hp = CURR_HP + amount;
     const RETURN = { ok: true, amount: amount, hp: this.data.hp}
     return RETURN;    
+  }
+  _setPositionToDefault(){
+  }
+  _handleImageOnLoad() {
+    this._setPositionToDefault();
+    super._handleImageOnLoad();
   }
 }
 
@@ -291,16 +299,12 @@ class Player extends Character {
     this.data.item.push(item);
     return true;
   }
-  _positionCenter(){
+  _setPositionToDefault(){
     // プレイヤーを画面のセンターに配置
     this.position = {
       x: this.canvas.width/2 - this.image.width/this.frames.max/2,
       y: this.canvas.height/2 - this.image.height/2,
     }
-  }
-  _handleImageOnLoad() {
-    this._positionCenter();
-    super._handleImageOnLoad();
   }
 }
 class PlayerBattle extends Player {
@@ -326,110 +330,9 @@ class PlayerBattle extends Player {
       } 
   }
   updateImg() {
+    this.position = undefined;
     const SRC = this.pathToImg + this.data.image.up;
     super.updateImg(SRC);
-  }
-  _setPositionToDefault() {
-    this.position = {
-      x: Math.round(canvas.width / PlayerBattle.PLAYER_WIDTH_RATIO * 10) / 10,
-      y: Math.round((canvas.height - this.drawHeight) / 2 * 10) / 10
-    }
-  }
-  _handleImageOnLoad() {
-    this._setPositionToDefault();
-    super._handleImageOnLoad();
-    this.hp.updatePosition(this.position);
-  }
-  draw() {
-    if(!this.position) {
-      if(this.image.complete) {
-        this._setPositionToDefault();
-        super.draw();
-        this.hp.draw();
-      }else {
-        this.image.onload = () => {
-          this.draw();
-        }
-      }
-    }else {
-      super.draw();
-      this.hp.draw();
-    }
-  }
-}
-
-class CharacterBattle extends Character {
-  // キャンバスに対するキャラクターサイズの比率
-  static PLAYER_WIDTH_RATIO = 1/6;
-  static ENEMY_WIDTH_RATIO = 1/8;
-  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, isPlayer = true, data, pathToImg, bottom}) {
-    super({canvas, canvasContent, position, image, movementDelay, frames, moving, isPlayer, data, pathToImg});
-    this.isPlayer = isPlayer;
-    this.bottom = bottom || 0;
-
-    this.drawWidth = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO))/ 10;
-    this.drawHeight = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO)) / 10;
-    this.hp = new Hp({
-      canvasContent: this.c,
-      position: {
-        x: 0,
-        y: 0,
-      },
-      thickness: 5,
-      width: this.drawWidth,
-      currentHp:this.data.hp,
-      maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
-    });
-    this.image.onload = () => {
-      this._handleImageOnLoad();
-    } 
-    
-  }
-  updateImg() {
-    const SRC = this.pathToImg + (this.isPlayer?this.data.image.up:this.data.image.down);
-    const IMAGE = new Image();
-    IMAGE.onload = () => {
-      this._handleImageOnLoad();
-    }
-    IMAGE.src = SRC;
-    this.image = IMAGE;
-  }
-  _setPositionToDefault() {
-    this.position = {
-      x: this.isPlayer
-        ?Math.round(canvas.width / 6 * 10) / 10
-        :Math.round((canvas.width * 5/6 - this.drawWidth) * 10) / 10,
-      y: this.isPlayer
-        ?Math.round((canvas.height - this.drawHeight - this.bottom + 8) * 10) / 10
-        :Math.round(canvas.height / 4 * 10) / 10
-    }
-  }
-  _handleImageOnLoad() {
-    this._setPositionToDefault();
-    super._handleImageOnLoad();
-    this.hp.updatePosition(this.position);
-  }
-  loseHp(amount) {
-    amount = amount? amount : 1;
-    const RESULT = super.loseHp(amount);
-    if(!RESULT) return false;
-    if(!this.hp.loseHp(amount)) return false;
-    return RESULT;
-  }
-  recoverHp(amount) {
-    amount = amount? amount : 1;
-    const RESULT = super.recoverHp(amount);
-    if(!RESULT) return false;
-    if(!this.hp.recoverHp(amount)) return false;
-    return RESULT;
-  }
-  run() {
-    if(trueWithRatio(this.data.rateRun)) {
-      this.succeedRun = true;
-      return true;
-    }else {
-      return false;
-    }
   }
   updateData(newData) {
     if(super.updateData(newData)) {
@@ -440,6 +343,96 @@ class CharacterBattle extends Character {
   }
   addEnemyLog(enemyKey) {
     this.data.enemy.push(enemyKey);
+  }
+  loseHp(amount) {
+    const RESULT = super.loseHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.loseHp(RESULT.amount)) return false;
+    return RESULT;
+  }
+  recoverHp(amount) {
+    const RESULT = super.recoverHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.recoverHp(RESULT.amount)) return false;
+    return RESULT;
+  }
+  run() {
+    if(trueWithRatio(this.data.rateRun)) {
+      this.succeedRun = true;
+      return true;
+    }else {
+      return false;
+    }
+  }
+  _setPositionToDefault() {
+    this.position = {
+      // 数字は敵と均等に配置できるように設定
+      x: Math.round(this.canvas.width / 6 * 10) / 10,
+      y: Math.round((this.canvas.height - this.drawHeight) / 2 * 10) / 10
+    }
+  }
+  _handleImageOnLoad() {
+    super._handleImageOnLoad();
+    this.hp.updatePosition(this.position);
+  }
+  _draw() {
+    super._draw();
+    this.hp.draw();
+  }
+}
+class EnemyBattle extends Character {
+  // キャンバスに対するキャラクターサイズの比率
+  static ENEMY_WIDTH_RATIO = 1/8;
+  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, data, pathToImg}) {
+    super({canvas, canvasContent, position, image, movementDelay, frames, moving, data, pathToImg});
+      this.drawWidth = Math.round(this.canvas.width * 10 * EnemyBattle.ENEMY_WIDTH_RATIO)/ 10;
+      this.drawHeight = Math.round(this.canvas.width * 10 * EnemyBattle.ENEMY_WIDTH_RATIO) / 10;
+      this.hp = new Hp({
+        canvasContent: this.c,
+        position: {
+          x: 0,
+          y: 0,
+        },
+        thickness: 5,
+        width: this.drawWidth,
+        currentHp:this.data.hp,
+        maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
+      });
+      this.image.onload = () => {
+        this._handleImageOnLoad();
+      } 
+  }
+  updateImg() {
+    this.position = undefined;
+    const SRC = this.pathToImg + this.data.image.down;
+    super.updateImg(SRC);
+  }
+  loseHp(amount) {
+    const RESULT = super.loseHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.loseHp(RESULT.amount)) return false;
+    return RESULT;
+  }
+  recoverHp(amount) {
+    const RESULT = super.recoverHp(amount);
+    if(!RESULT) return false;
+    if(!this.hp.recoverHp(RESULT.amount)) return false;
+    return RESULT;
+  }
+  _setPositionToDefault() {
+    this.position = {
+      // 数字はプレイヤーと均等に配置できるように設定
+      x: Math.round((this.canvas.width * 5/6 - this.drawWidth) * 10) / 10,
+      y: Math.round(this.canvas.height / 4 * 10) / 10
+    }
+  }
+  _handleImageOnLoad() {
+    super._handleImageOnLoad();
+    this.hp.updatePosition(this.position);
+  }
+  _draw() {
+    super._draw();
+    this.hp.draw();
   }
 }
 
@@ -502,4 +495,4 @@ class Hp {
   }
 }
 
-export { Boundary, Sprite, Character, Player, CharacterBattle, Hp};
+export { Boundary, Sprite, Character, Player, PlayerBattle, EnemyBattle};

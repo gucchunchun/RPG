@@ -1,7 +1,7 @@
 import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from '../data/boundaries.js';
 import { makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../utils.js';
-import { Boundary, Sprite, Character, Player, CharacterBattle } from './drawerClass.js';
+import { Boundary, Sprite, Character, Player, PlayerBattle, EnemyBattle } from './drawerClass.js';
 import { EventBus } from './eventBus.js';
 import { gsap } from '../node_modules/gsap/index.js';
 
@@ -352,6 +352,7 @@ class TitleUICtr extends UICtr {
     this._openTitlePage();
   }
   handleGameOver() {
+    this.prevData = undefined;
     setTimeout(() => {
       this.handleGameStart();
     }, this.transTime)
@@ -656,6 +657,7 @@ class BattleUICtr extends UICtr {
     EVENT_BUS.subscribe(EVENT.attackSuccess, this.handleAttackSuccess.bind(this));
     EVENT_BUS.subscribe(EVENT.attackFail, this.handleAttackFail.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
+    EVENT_BUS.subscribe(EVENT.gameOver, this.handleGameOver.bind(this));
     this._init();
   }
   handlePlayerSelect({playerData}) {
@@ -711,7 +713,15 @@ class BattleUICtr extends UICtr {
   }
   handleBattleEnd() {
     this._closeBottomCtr();
-    this._closeCtr();
+    setTimeout(() => {
+      this._closeCtr();
+    }, this.transTime)
+  }
+  handleGameOver() {
+    this._closeBottomCtr();
+    setTimeout(() => {
+      this._closeCtr();
+    }, this.transTime)
   }
   handleItemSetBtnClick() {
     const CHECKED_LIST = this.itemCtr.getCheckedItemName();
@@ -807,13 +817,18 @@ class UIManager {
     this.transTime = transTime;
     this.styleSpace = styleSpace;
 
+    EVENT_BUS.subscribe(EVENT.gameStart, this.handleGameStart.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.overlapScreen.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.overlapScreen.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.overlapScreen.bind(this));
-
     EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
     EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
     EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
+    EVENT_BUS.subscribe(EVENT.gameOver, this.handleGameOver.bind(this));
+    this._init();
+  }
+  _init() {
+    this.overlap.addMsg('');
   }
   overlapScreen() {
     this.overlap.circle();
@@ -841,6 +856,13 @@ class UIManager {
     }
     const MSG = `レベル${lv}になった`;
     this.overlap.showMsg(MSG);
+  }
+  handleGameStart() {
+    this._init();
+  }
+  handleGameOver() {
+    this.overlap.addMsg('ゲームオーバー');
+    this.overlap.down();
   }
 }
 
@@ -1083,15 +1105,6 @@ class MapAnimation extends Animation {
 
     this._makeEnemyList(this.player.data.lv);
     this._makeItemList(this.player.data.lv);
-  }
-  init() {
-    // reset
-    this.enemyList = [];
-    this.itemList = [];
-    this.action.lastTime = 0;
-    this.item.lastTime = 0;
-    this.water.lastTime = 0;
-    this.nap.lastTime = 0;
   }
   handleLevelUp({lv}) {
     this._stopAnimationFor(this.transTime);
@@ -1402,7 +1415,7 @@ class BattleAnimation extends Animation {
     });
     IMG_BG.src = BattleAnimation.BG_SRC;
     const IMG_PLAYER = new Image();
-    this.player = new CharacterBattle({
+    this.player = new PlayerBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_PLAYER,
@@ -1412,12 +1425,11 @@ class BattleAnimation extends Animation {
     });
     IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
     const IMG_ENEMY = new Image();
-    this.enemy = new CharacterBattle({
+    this.enemy = new EnemyBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_ENEMY,
       data: {...ENEMY_DATA_TYPE},
-      isPlayer: false,
       pathToImg: this.pathToImg,
     });
     IMG_ENEMY.src = this.pathToImg + BattleAnimation.ENEMY_IMG_SRC;
@@ -1464,7 +1476,7 @@ class BattleAnimation extends Animation {
       setTimeout(()=>{
         if(this.player.loseHp().hp === 0) {
           setTimeout(() => {
-            EVENT_BUS.publish(EVENT.gameOver, {});
+            EVENT_BUS.publish(EVENT.gameOver, {playerData: this.player.data});
           }, this.transTime * 2)
         }else {
           setTimeout(() => {
@@ -1525,6 +1537,7 @@ class GameManager {
     }, this.transTime)
   }
   handleGameOver() {
+    localStorage.setItem("prevData", JSON.stringify(null));
     this._init();
   }
   saveData() {
@@ -1534,12 +1547,12 @@ class GameManager {
     this.battleAnimation._stopCurrAnimation();
   }
   _init() {
-    this.player;
-    this.mapAnimation;
+    this.player = undefined;
+    this.mapAnimation = undefined;
   }
   _clearCanvas() {
     this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
 
-export {UIManager, MapUICtr, TitleUICtr, BattleUICtr, Log, AverageEncounter, UICount,Boundary, Sprite, Character, Player, CharacterBattle, GameManager, MapAnimation, Keys, UI};
+export { UIManager, GameManager };

@@ -1,4 +1,4 @@
-import { Boundary } from './class/classes.js';
+import { Boundary } from './class/drawerClass.js';
 
 function rectCollision({rect1, rect2}) {
   const RESULT = (rect2.position.x <= rect1.position.x + rect1.width && 

@@ -1,8 +1,5 @@
 import { fetchJsonData } from './fetchData.js';
-import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from './utils.js';
-import { UIManager, Log,  GameManager } from './class/classes.js';
-import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "./types.js";
-import { gsap } from './node_modules/gsap/index.js';
+import { UIManager, GameManager } from './class/classes.js';
 
 // グローバル設定
 const FPS = 30; // 1フレームあたり 1000/30 millisecond
