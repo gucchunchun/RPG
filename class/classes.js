@@ -1369,7 +1369,7 @@ class MapAnimation extends Animation {
         this.action.lastTime = new Date().getTime();
         const ENEMY_KEY = choiceRandom(this.enemyList);
         this.player.data.enemy.push(ENEMY_KEY);
-        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: this.gameDatabase.enemy[ENEMY_KEY]});
+        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: {...this.gameDatabase.enemy[ENEMY_KEY]}});
       }
     }
   }

@@ -407,6 +407,13 @@ class EnemyBattle extends Character {
     const SRC = this.pathToImg + this.data.image.down;
     super.updateImg(SRC);
   }
+  updateData(newData) {
+    if(super.updateData(newData)) {
+      this.hp.updateCurrentHp({currHp: newData.hp, maxHp: newData.maxHp || newData.hp});
+      return true;
+    }
+    return false;
+  }
   loseHp(amount) {
     const RESULT = super.loseHp(amount);
     if(!RESULT) return false;
