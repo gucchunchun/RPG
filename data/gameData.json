@@ -10,17 +10,6 @@
                   "right": "mainMRight.png",
                   "left": "mainMLeft.png"
               },
-              "skill": {
-                  "costStep": 20,
-                  "detail": [
-                      {
-                          "target": "player",
-                          "change": 2
-                      }
-                  ],
-                  "rateSuccess": 0.5,
-                  "dialog": "ノリと勢いで飲み干し、逆に元気を取り戻した。"
-              },
               "item": [
                   "gin",
                   "tonic",
@@ -31,11 +20,11 @@
               "enemy": [],
               "lv": 1,
               "lvUpCondition": {
-                  "beat": 1,
-                  "step": 10
+                  "beat": 2,
+                  "step": 40
               },
-              "rateEncounter": 0.5,
-              "rateRun": 1,
+              "rateEncounter": 0.2,
+              "rateRun": 0,
               "hp": 1,
               "maxHp": 10
           },
@@ -47,21 +36,6 @@
                   "up": "mainFBack.png",
                   "right": "mainFRight.png",
                   "left": "mainFLeft.png"
-              },
-              "skill": {
-                  "costStep": 20,
-                  "detail": [
-                      {
-                          "target": "player",
-                          "change": 1
-                      },
-                      {
-                          "target": "enemy",
-                          "change": -1
-                      }
-                  ],
-                  "rateSuccess": 0.7,
-                  "dialog": "「お酒飲めないんです...飲んでもらえますか？」\nお酒弱い女子を演じて敵にカウンターアタック"
               },
               "item": [
                   "gin",
@@ -76,7 +50,7 @@
                   "beat": 2,
                   "step": 70
               },
-              "rateEncounter": 0.5,
+              "rateEncounter": 0.2,
               "rateRun": 1,
               "hp": 10,
               "maxHp": 10

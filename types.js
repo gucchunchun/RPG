@@ -14,12 +14,6 @@ const PLAYER_DATA_TYPE = {
       right: '',
       left: ''
   },
-  skill: {
-      costStep: 0,
-      detail: [],
-      rateSuccess: 0,
-      dialog: ''
-  },
   item: [],
   step: 0,
   beat: 0,

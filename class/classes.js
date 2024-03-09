@@ -205,10 +205,6 @@ class Overlap {
     this.overlapMsg = OVERLAP_MSG;
   }
   circle() {
-    if(!gsap) {
-      console.log('Install GSAP'); 
-      return;
-    }
     gsap.timeline()
     .fromTo(this.overlap, 
       {
@@ -230,10 +226,6 @@ class Overlap {
     )
   }
   down() {
-    if(!gsap) {
-      console.log('Install GSAP'); 
-      return;
-    }
     gsap.timeline()
     .fromTo(this.overlap, 
     {
@@ -372,7 +364,6 @@ class TitleUICtr extends UICtr {
     const NEW_DATA = this.gameDatabase.player[SELECTED_KEY];
     const IMAGE_DOWN = NEW_DATA.image.down;
     if(IMAGE_DOWN === this.playerData.image.down) return;
-    console.log(IMAGE_DOWN)
     EVENT_BUS.publish(EVENT.characterSelect, { imgSrc: IMAGE_DOWN })
     this.playerData = NEW_DATA;
   }
@@ -544,7 +535,6 @@ class MapUICtr extends UICtr {
     this.lvCount.setValue(lv);
   }
   handleStep() {
-    console.log('step')
     this.stepCount.countUp();
     this.avgEncCount.countUpStep();
   }
@@ -552,10 +542,7 @@ class MapUICtr extends UICtr {
     this.hpCount.countUp(amount);
   }
   handleAttackSuccess() {
-    console.log('hi')
-    console.log(this.beatCount.num)
     this.beatCount.countUp();
-    console.log(this.beatCount.num)
   }
   handleEncounter({enemyData}) {
     this._mapEnd();
@@ -563,7 +550,6 @@ class MapUICtr extends UICtr {
     this.encLog.addLog(enemyData.name);
   }
   handleBattleEnd({playerData}) {
-    console.log(playerData);
     this._updatePlayerInfo(playerData);
     this._mapStart();
   }
@@ -639,6 +625,7 @@ class BattleUICtr extends UICtr {
     this.itemSetBtnUI = new UI(itemSetBtnId);
     this.enemyName;
     this.cocktailName;
+    this.triedRun = false;
 
     this.openItemWindow = this._openItemWindow.bind(this); 
     this.closeItemWindowFunc = this._closeItemWindow.bind(this); 
@@ -678,6 +665,7 @@ class BattleUICtr extends UICtr {
         this.diaLogCtrUI.addLog(`${this.enemyName}が現れた`);
         setTimeout(()=> {
           this.diaLogCtrUI.addLog(`${this.cocktailName}を飲みたそうにしている`);
+          this._ableFightBtn();
           this._ableRunBtn();
         }, this.transTime)
       }, this.transTime)
@@ -693,11 +681,9 @@ class BattleUICtr extends UICtr {
     this.diaLogCtrUI.addLog('・・・');
     setTimeout(() => {
       this.diaLogCtrUI.addLog('逃げ切れなかった');
+      this._ableFightBtn();
+      this._clearChecked();
     }, this.transTime)
-  }
-  handleRunOptClick() {
-    EVENT_BUS.publish(EVENT.run, {});
-    this._disableRunBtn();
   }
   handleAttackSuccess() {
     this.diaLogCtrUI.addLog('・・・');
@@ -709,6 +695,10 @@ class BattleUICtr extends UICtr {
     this.diaLogCtrUI.addLog('・・・');
     setTimeout(() => {
       this.diaLogCtrUI.addLog(`${this.enemyName}: こんなマズイもん飲めない！<br>攻撃を受けHPが1減った`);
+      this._ableFightBtn();
+      this._clearChecked();
+      if(this.triedRun) return;
+      this._ableRunBtn();
     }, this.transTime)
   }
   handleBattleEnd() {
@@ -723,19 +713,27 @@ class BattleUICtr extends UICtr {
       this._closeCtr();
     }, this.transTime)
   }
+  handleRunOptClick() {
+    EVENT_BUS.publish(EVENT.run, {});
+    this._disableFightBtn();
+    this._disableRunBtn();
+    this.triedRun = true;
+  }
   handleItemSetBtnClick() {
     const CHECKED_LIST = this.itemCtr.getCheckedItemName();
     this._closeItemWindow();
     this.diaLogCtrUI.addLog(`${CHECKED_LIST.map(itemKey => this.gameDatabase.item[itemKey].name).join('、')}を混ぜた`);
     EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
+    this._disableFightBtn();
+    this._disableRunBtn();
   }
   _init() {
     this._closeCtr();
     this._closeItemWindow();
 
-    this.fightOptUI.elem.checked = false;
-    this.runOptUI.elem.checked = false;
-    this.runOptUI.elem.disabled = false;
+    this.triedRun = false;
+    this._clearChecked();
+    this._disableFightBtn();
     this._disableRunBtn();
     this.diaLogCtrUI.clearLog();
     this.enemyName = '';
@@ -743,6 +741,16 @@ class BattleUICtr extends UICtr {
   }
   _setCocktailName(cocktailName) {
     this.cocktailUI.elem.innerHTML = cocktailName;
+  }
+  _ableFightBtn() {
+    this.fightOptUI.elem.disabled = false;
+  }
+  _disableFightBtn() {
+    this.fightOptUI.elem.disabled = true;
+  }
+  _clearChecked() {
+    this.fightOptUI.elem.checked = false;
+    this.runOptUI.elem.checked = false;
   }
   _ableRunBtn() {
     this.runOptUI.elem.disabled = false;
@@ -1115,7 +1123,6 @@ class MapAnimation extends Animation {
     this._stopAnimationFor(this.transTime);
   }
   handleEncounter() {
-    console.log('stop map animation')
     this._stopCurrAnimation();
   }
   handleBattleEnd({playerData}) {
@@ -1127,7 +1134,7 @@ class MapAnimation extends Animation {
   _mapStart() {
     super.animate();
     if(!this.player.levelUp()) return;
-    setTime(() => {
+    setTimeout(() => {
       EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
     }, this.transTime)
   }
@@ -1357,13 +1364,11 @@ class MapAnimation extends Animation {
       if(this.action.lastTime !== 0 && (this.currTime - this.item.lastTime) < this.item.interval) return;
       const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
       if(trueWithRatio(RATIO)) {
-        console.log('battle');
         this.player.stop();
         this.keys.lastKey = undefined;
         this.action.lastTime = new Date().getTime();
         const ENEMY_KEY = choiceRandom(this.enemyList);
         this.player.data.enemy.push(ENEMY_KEY);
-        console.log(this.player.data)
         EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: this.gameDatabase.enemy[ENEMY_KEY]});
       }
     }
@@ -1443,7 +1448,6 @@ class BattleAnimation extends Animation {
     if(!this.enemy.updateData(enemyData)) throw new Error('Fail to Update Enemy Data at BattleAnimation.animate');
     
     setTimeout(() => {
-      console.log('battle animation');
       this._clearCanvas();
       super.animate();
     }, this.transTime)
@@ -1477,10 +1481,6 @@ class BattleAnimation extends Animation {
         if(this.player.loseHp().hp === 0) {
           setTimeout(() => {
             EVENT_BUS.publish(EVENT.gameOver, {playerData: this.player.data});
-          }, this.transTime * 2)
-        }else {
-          setTimeout(() => {
-            EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data});
             this._stopCurrAnimation();
           }, this.transTime * 2)
         }
@@ -1489,7 +1489,6 @@ class BattleAnimation extends Animation {
 
   }
   _update() {
-    // console.log('update')
   }
   _render() {
     this.bg.draw();
