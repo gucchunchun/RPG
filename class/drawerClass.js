@@ -44,7 +44,7 @@ class Sprite {
     this.width = this.image.width / this.frames.max;
     this.height = this.image.height;
   }
-  _drawImageAndAnimate() {
+  _draw() {
     // イメージの描写
     this.c.drawImage(
         this.image,
@@ -77,15 +77,14 @@ class Sprite {
     if(!this.width || !this.height) {
       if(this.image.complete) {
         this._handleImageOnLoad();
-        this._drawImageAndAnimate();
+        this._draw();
       }else {
         this.image.onload = () => {
-          this._handleImageOnLoad();
-          this._drawImageAndAnimate();
+          this.draw();
         };
       }
     }else {
-      this._drawImageAndAnimate();
+      this._draw();
     }
   }
   updatePosition({x, y}) {
@@ -110,20 +109,13 @@ class Character extends Sprite {
     this.data = data? data: this.isPlayer? PLAYER_DATA_TYPE: ENEMY_DATA_TYPE;
     this.pathToImg = pathToImg;
   }
-  updateImg(src) {
-    const SRC = (src?src:this.pathToImg + this.data.image.down);
-    const IMAGE = new Image();
-    IMAGE.onload = () => {
-      this._handleImageOnLoad();
-    }
-    IMAGE.src = SRC;
-    this.image = IMAGE;
-  }
-  editData({key, newValue}) {
+  editData(key, newValue) {
     if(Object.keys(this.data).includes(key)) {
       this.data[key] = newValue;
       return true;
     }else {
+      console.log(`Data does not includes key ${key}`)
+      console.log(this.data)
       return false;
     }
   }
@@ -132,7 +124,6 @@ class Character extends Sprite {
       console.log('UpdateData needs to be an object');
       return false;
     }
-    // 全部同一のキーなら交換OK
     const NEW_DATA_KEYS = Object.keys(newData);
     const DATA_KEYS = Object.keys(this.data);
     const IS_SAME_KEYS = NEW_DATA_KEYS.length === DATA_KEYS.length
@@ -147,6 +138,16 @@ class Character extends Sprite {
       console.log('Input object does not have the same keys as class data.');
       return false;
     }
+  }
+  updateImg(src) {
+    // image.downが正面を向いたキャラクター画像
+    const SRC = (src?src:this.pathToImg + this.data.image.down);
+    const IMAGE = new Image();
+    IMAGE.onload = () => {
+      this._handleImageOnLoad();
+    }
+    IMAGE.src = SRC;
+    this.image = IMAGE;
   }
   loseHp(amount) {
     amount = amount? amount : 1;
@@ -198,17 +199,6 @@ class Player extends Character {
       this._handleImageOnLoad();
     } 
   }
-  _positionCenter(){
-    // プレイヤーを画面のセンターに配置
-    this.position = {
-      x: this.canvas.width/2 - this.image.width/this.frames.max/2,
-      y: this.canvas.height/2 - this.image.height/2,
-    }
-  }
-  _handleImageOnLoad() {
-    this._positionCenter();
-    super._handleImageOnLoad();
-  }
   step() {
     this.data.step ++;
     this.moved = 0;
@@ -220,7 +210,7 @@ class Player extends Character {
   stop() {
     this.moving = false;
     this.moved = 0;
-    // 左右が交互に前進する（frame.val偶数番はプレイヤーが止まっているフレーム）
+    // 左右が交互に前進するようにフレームを設定（frame.val偶数番はプレイヤーが止まっているフレーム）
     while(this.frames.val % 2 === 1) {
       this.frames.val ++;
       if( (this.frames.max - 1) < this.frames.val ) {
@@ -229,27 +219,38 @@ class Player extends Character {
       }
     }
   }
-  changeStateTo(newState) {
-    if(this.state !== newState) {
-      this.state = newState;
-      console.log(this.state)
-      switch(newState) {
-        case CHARACTER_STATE.down:
-          this.image = this.sprite.down;
-          break;
-        case CHARACTER_STATE.up:
-          this.image = this.sprite.up;
-          break;
-        case CHARACTER_STATE.left:
-          this.image = this.sprite.left;
-          break;
-        case CHARACTER_STATE.right:
-          this.image = this.sprite.right;
-          break;
-      }
-      this.frames.val = 0;
-      this.moved = 0;
+  levelUp() {
+    const CONDITION = this.data.lvUpCondition;
+    if(!CONDITION) return false;
+    for(let key in CONDITION) {
+      if(this.data[key] < CONDITION[key]) return false;
     }
+    if(!this.data.lv) return false;
+    this.data.lv++;
+    for(let key in CONDITION) {
+      CONDITION[key] *= 2;
+    }
+    return true;
+  }
+  changeStateTo(newState) {
+    if(this.state === newState) return;
+    this.state = newState;
+    switch(newState) {
+      case CHARACTER_STATE.down:
+        this.image = this.sprite.down;
+        break;
+      case CHARACTER_STATE.up:
+        this.image = this.sprite.up;
+        break;
+      case CHARACTER_STATE.left:
+        this.image = this.sprite.left;
+        break;
+      case CHARACTER_STATE.right:
+        this.image = this.sprite.right;
+        break;
+    }
+    this.frames.val = 0;
+    this.moved = 0;
   }
   changeVelocity(newVelocity) {
     if(this.velocity !== newVelocity) {
@@ -278,33 +279,82 @@ class Player extends Character {
           xChange = this.velocity;
           break;
       }
-      
       const DIRECTION = {x: xChange, y: yChange};
       return DIRECTION;
-  }
-  levelUp() {
-    const CONDITION = this.data.lvUpCondition;
-    if(!CONDITION) return false;
-    for(let key in CONDITION) {
-      if(this.data[key] < CONDITION[key]) return false;
-    }
-    if(!this.data.lv) return false;
-    this.data.lv++;
-    for(let key in CONDITION) {
-      CONDITION[key] *= 2;
-    }
-    return true;
   }
   addItem(item) {
     if(!this.data.item) {
       console.log('Player.data.item is not found');
       return false;
     }
-    console.log('player has' + this.data.item)
     if(this.data.item.includes(item)) return false;
-    console.log(item)
     this.data.item.push(item);
     return true;
+  }
+  _positionCenter(){
+    // プレイヤーを画面のセンターに配置
+    this.position = {
+      x: this.canvas.width/2 - this.image.width/this.frames.max/2,
+      y: this.canvas.height/2 - this.image.height/2,
+    }
+  }
+  _handleImageOnLoad() {
+    this._positionCenter();
+    super._handleImageOnLoad();
+  }
+}
+class PlayerBattle extends Player {
+  // キャンバスに対するキャラクターサイズの比率
+  static PLAYER_WIDTH_RATIO = 1/6;
+  constructor({canvas, canvasContent, position, image, movementDelay = 5, frames = {max: 4}, moving = false, data, pathToImg}) {
+    super({canvas, canvasContent, position, image, movementDelay, frames, moving, data, pathToImg});
+      this.drawWidth = Math.round(this.canvas.width * 10 * PlayerBattle.PLAYER_WIDTH_RATIO)/ 10;
+      this.drawHeight = Math.round(this.canvas.width * 10 * PlayerBattle.PLAYER_WIDTH_RATIO) / 10;
+      this.hp = new Hp({
+        canvasContent: this.c,
+        position: {
+          x: 0,
+          y: 0,
+        },
+        thickness: 5,
+        width: this.drawWidth,
+        currentHp:this.data.hp,
+        maxHp: this.data.maxHp? this.data.maxHp :this.data.hp
+      });
+      this.image.onload = () => {
+        this._handleImageOnLoad();
+      } 
+  }
+  updateImg() {
+    const SRC = this.pathToImg + this.data.image.up;
+    super.updateImg(SRC);
+  }
+  _setPositionToDefault() {
+    this.position = {
+      x: Math.round(canvas.width / PlayerBattle.PLAYER_WIDTH_RATIO * 10) / 10,
+      y: Math.round((canvas.height - this.drawHeight) / 2 * 10) / 10
+    }
+  }
+  _handleImageOnLoad() {
+    this._setPositionToDefault();
+    super._handleImageOnLoad();
+    this.hp.updatePosition(this.position);
+  }
+  draw() {
+    if(!this.position) {
+      if(this.image.complete) {
+        this._setPositionToDefault();
+        super.draw();
+        this.hp.draw();
+      }else {
+        this.image.onload = () => {
+          this.draw();
+        }
+      }
+    }else {
+      super.draw();
+      this.hp.draw();
+    }
   }
 }
 
@@ -316,7 +366,7 @@ class CharacterBattle extends Character {
     super({canvas, canvasContent, position, image, movementDelay, frames, moving, isPlayer, data, pathToImg});
     this.isPlayer = isPlayer;
     this.bottom = bottom || 0;
-    this.succeedRun = false;
+
     this.drawWidth = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO))/ 10;
     this.drawHeight = Math.round(this.canvas.width * 10 * (this.isPlayer?CharacterBattle.PLAYER_WIDTH_RATIO:CharacterBattle.ENEMY_WIDTH_RATIO)) / 10;
     this.hp = new Hp({
@@ -358,38 +408,6 @@ class CharacterBattle extends Character {
     this._setPositionToDefault();
     super._handleImageOnLoad();
     this.hp.updatePosition(this.position);
-  }
-  draw() {
-    if(!this.position) {
-      if(this.image.complete) {
-        this.position = {
-          x: this.isPlayer
-            ?canvas.width / 6
-            :canvas.width * 5/6 - this.drawWidth,
-          y: this.isPlayer
-            ?canvas.height - this.drawHeight - this.bottom + 8
-            :canvas.height / 4
-        }
-        super.draw();
-        this.hp.draw();
-      }else {
-        this.image.onload = () => {
-          this.position = {
-            x: this.isPlayer
-              ?canvas.width / 6
-              :canvas.width * 5/6 - this.drawWidth,
-            y: this.isPlayer
-              ?canvas.height - this.drawHeight - this.bottom + 8
-              :canvas.height / 4
-          }
-          super.draw();
-          this.hp.draw();
-        };
-      }
-    }else {
-      super.draw();
-      this.hp.draw();
-    }
   }
   loseHp(amount) {
     amount = amount? amount : 1;

@@ -1,11 +1,11 @@
 import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from '../data/boundaries.js';
-import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from '../utils.js';
-import { gsap } from '../node_modules/gsap/index.js';
-import { Boundary, Sprite, Character, Player, CharacterBattle, Hp} from './drawerClass.js';
+import { makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../utils.js';
+import { Boundary, Sprite, Character, Player, CharacterBattle } from './drawerClass.js';
 import { EventBus } from './eventBus.js';
+import { gsap } from '../node_modules/gsap/index.js';
 
-// UIとゲームを別にするためのイベントハンドラー
+// UIとゲームフローを分けるため
 const EVENT_BUS = new EventBus();
 
 // UI
@@ -165,7 +165,6 @@ class ItemCtr {
     this.itemList = [];
   }
   makeItemList(playerData) {
-    console.log(playerData.item)
     this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
       classList: ['item'], itemDatabase: this.itemDatabase })
@@ -184,11 +183,10 @@ class ItemCtr {
     }
   }
 }
-
 class Overlap {
   static OVERLAP_CLASS = 'overlap';
   static OVERLAP_MSG_CLASS = 'overlap-msg';
-  constructor({gameCtrUI, transTime}) {
+  constructor(gameCtrUI, transTime) {
     this.gameCtrUI = gameCtrUI;
     this.transTime = transTime; //millisecond
     this.overlap;
@@ -294,8 +292,6 @@ class Overlap {
     }, this.transTime * 2)
   }
 }
-
-
 class UICtr {
   constructor({ctrId, gameDatabase, transTime, styleSpace}) {
     this.ctrUI = new UI(ctrId);
@@ -348,11 +344,17 @@ class TitleUICtr extends UICtr {
     this.playerSelectBtnUI.elem.addEventListener('click', this.handlePlayerSelectBtnClick.bind(this));
     
     EVENT_BUS.subscribe(EVENT.gameStart, this.handleGameStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.gameOver, this.handleGameOver.bind(this));
   }
   handleGameStart() {
     this._init();
     this._openCtr();
     this._openTitlePage();
+  }
+  handleGameOver() {
+    setTimeout(() => {
+      this.handleGameStart();
+    }, this.transTime)
   }
   handleNewGameBtnClick() {
     EVENT_BUS.publish(EVENT.newGame);
@@ -800,7 +802,7 @@ class UIManager {
     this.titleMgr = new TitleUICtr({...UIDatabase.title, gameDatabase: gameDatabase, transTime: transTime, styleSpace: styleSpace});
     this.mapMgr = new MapUICtr({...UIDatabase.map, gameDatabase: gameDatabase, transTime: transTime, styleSpace: styleSpace});
     this.battleMgr = new BattleUICtr({...UIDatabase.battle, gameDatabase: gameDatabase, transTime: transTime, styleSpace: styleSpace});
-    this.overlap = new Overlap({gameCtrUI: this.gameCtrUI, transTime: transTime});
+    this.overlap = new Overlap(this.gameCtrUI, transTime);
     this.gameDatabase = gameDatabase;
     this.transTime = transTime;
     this.styleSpace = styleSpace;
@@ -839,59 +841,6 @@ class UIManager {
     }
     const MSG = `レベル${lv}になった`;
     this.overlap.showMsg(MSG);
-  }
-}
-
-// アニメーションマネージャー
-class GameManager {
-  constructor({canvas, canvasContent, fps, offSet, gameDatabase, transTime, pathToImg, keysId = KEYS_INTERFACE}) {
-    this.canvas = canvas;
-    this.c = canvasContent;
-    this.fps = fps;
-    this.frameInterval = 1000 / this.fps;
-    this.offSet = offSet;
-    this.gameDatabase = gameDatabase;
-    this.transTime = transTime;
-    this.pathToImg = pathToImg;
-    this.keys = new Keys({...keysId});
-    this.player;
-    this.titleAnimation = new TitleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
-    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
-    this.mapAnimation;
-
-    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
-  }
-  gameStart() {
-    this._init();
-    EVENT_BUS.publish(EVENT.gameStart, {});
-  }
-  handlePlayerSelect({playerData}) {
-    const PLAYER_SPRITES = {};
-    for(let key of Object.keys(playerData.image)) {
-      const IMAGE = new Image();
-      IMAGE.src = this.pathToImg + playerData.image[key];
-      PLAYER_SPRITES[key] = IMAGE;
-    } 
-    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
-    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, player: this.player, keyEvent: this.keys, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
-    // playerSelectのイベント発火後にmapAnimationが作成されるため
-    setTimeout(() => {
-      this._clearCanvas();
-      this.mapAnimation.animate();
-    }, this.transTime)
-  }
-  saveData() {
-    localStorage.setItem("prevData", JSON.stringify(this.player.data));
-  }
-  stopBattleAnimation() {
-    this.battleAnimation._stopCurrAnimation();
-  }
-  _init() {
-    this.player;
-    this.mapAnimation;
-  }
-  _clearCanvas() {
-    this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
 
@@ -979,6 +928,7 @@ class TitleAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.newGame, this.handleNewGame.bind(this));
     EVENT_BUS.subscribe(EVENT.characterSelect, this.handleCharacterSelect.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.gameOver, this.handleGameOver.bind(this));
   }
   handleGameStart() {
     this._init();
@@ -993,6 +943,13 @@ class TitleAnimation extends Animation {
   }
   handlePlayerSelect() {
     this._stopCurrAnimation();
+  }
+  handleGameOver() {
+    setTimeout(() => {
+      this._init();
+      this._clearCanvas();
+      this.animate();
+    }, this.transTime)
   }
   _init() {
     if(!this.player){
@@ -1169,8 +1126,9 @@ class MapAnimation extends Animation {
   }
   _makeEnemyList(lv) {
       const ENEMY_DATABASE = this.gameDatabase.enemy;
+      const IS_LIST_EMPTY = this.enemyList.length === 0;
       for(let key in ENEMY_DATABASE) {
-        if(!this.enemyList) {
+        if(IS_LIST_EMPTY) {
           // ゲームスタート時
           if(ENEMY_DATABASE[key].lv <= lv) {
             this.enemyList.push(key);
@@ -1184,9 +1142,17 @@ class MapAnimation extends Animation {
   }
   _makeItemList(lv) {
       const ITEM_DATABASE = this.gameDatabase.item;
+      const IS_LIST_EMPTY = this.itemList.length === 0;
       for(let key in ITEM_DATABASE) {
-        if(ITEM_DATABASE[key].lv === lv) {
-          this.itemList.push(key);
+        if(IS_LIST_EMPTY) {
+          // ゲームスタート時
+          if(ITEM_DATABASE[key].lv <= lv) {
+            this.itemList.push(key);
+          }
+        }else {
+          if(ITEM_DATABASE[key].lv === lv) {
+            this.itemList.push(key);
+          }
         }
       }
   }
@@ -1310,6 +1276,7 @@ class MapAnimation extends Animation {
             this.action.lastTime = this.currTime;
             this.item.lastIndex = i;
             EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY });
+            // OverlapMsgの表示を待つため
             this._stopAnimationFor(this.transTime);
             return;
           };
@@ -1332,7 +1299,9 @@ class MapAnimation extends Animation {
               this.water.lastTime = this.currTime;
               this.action.lastTime = this.currTime;
               this.water.lastIndex = i;
+              this.player.recoverHp(RESULT.amount);
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: '水を飲んで' });
+              // OverlapMsgの表示を待つため
               this._stopAnimationFor(this.transTime);
               return;
             };
@@ -1352,7 +1321,9 @@ class MapAnimation extends Animation {
             if(RESULT) {
               this.nap.lastTime = this.currTime;
               this.nap.lastIndex = i;
+              this.player.recoverHp(RESULT.amount);
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
+              // OverlapMsgの表示を待つため
               this._stopAnimationFor(this.transTime);
               return;
             };
@@ -1479,7 +1450,7 @@ class BattleAnimation extends Animation {
   handleSetItem({itemList}) {
     if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
       const BEAT  = this.player.data.beat + 1
-      this.player.editData({key: 'beat', newValue: BEAT });
+      this.player.editData('beat', BEAT);
       EVENT_BUS.publish(EVENT.attackSuccess, {});
       setTimeout(()=>{
         this.enemy.loseHp();
@@ -1512,6 +1483,62 @@ class BattleAnimation extends Animation {
     this.bg.draw();
     this.enemy.draw();
     this.player.draw();
+  }
+}
+
+class GameManager {
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, transTime, pathToImg, keysId = KEYS_INTERFACE}) {
+    this.canvas = canvas;
+    this.c = canvasContent;
+    this.fps = fps;
+    this.frameInterval = 1000 / this.fps;
+    this.offSet = offSet;
+    this.gameDatabase = gameDatabase;
+    this.transTime = transTime;
+    this.pathToImg = pathToImg;
+    this.keys = new Keys({...keysId});
+    this.player;
+    this.titleAnimation = new TitleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.mapAnimation;
+
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.gameOver, this.handleGameOver.bind(this));
+  }
+  gameStart() {
+    this._init();
+    EVENT_BUS.publish(EVENT.gameStart, {});
+  }
+  handlePlayerSelect({playerData}) {
+    const PLAYER_SPRITES = {};
+    for(let key of Object.keys(playerData.image)) {
+      const IMAGE = new Image();
+      IMAGE.src = this.pathToImg + playerData.image[key];
+      PLAYER_SPRITES[key] = IMAGE;
+    } 
+    this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
+    this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, player: this.player, keyEvent: this.keys, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
+    // playerSelectのイベント発火後にmapAnimationが作成されるため
+    setTimeout(() => {
+      this._clearCanvas();
+      this.mapAnimation.animate();
+    }, this.transTime)
+  }
+  handleGameOver() {
+    this._init();
+  }
+  saveData() {
+    localStorage.setItem("prevData", JSON.stringify(this.player.data));
+  }
+  stopBattleAnimation() {
+    this.battleAnimation._stopCurrAnimation();
+  }
+  _init() {
+    this.player;
+    this.mapAnimation;
+  }
+  _clearCanvas() {
+    this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
 
