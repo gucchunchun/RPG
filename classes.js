@@ -1459,8 +1459,8 @@ class TittleAnimation extends Animation {
     this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
     this.bg.updatePosition({x: 0, y: 0});
   }
-  handleSetCharacter({key}) {
-    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
+  handleSetCharacter({characterKey}) {
+    const NEW_PLAYER_DATA = {...this.gameDatabase.player[characterKey]};
     if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
     this.player.updateData(NEW_PLAYER_DATA);
   }

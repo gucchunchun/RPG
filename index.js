@@ -26,10 +26,10 @@ const UI_DATABASE = {
     titlePageBtnCtrId: 'titlePageBtnCtr',
     startNewGameBtnId: 'startNewGame',
     playerSelectCtrId: 'playerSelectCtr', 
-    playerSexOptCtrId: 'playerSexOptCtr', 
+    characterOptCtrId: 'characterOptCtr', 
     playerNameId: 'playerName',
     nameErrMsgId: 'nameErrMsg',
-    playerSetBtnId: 'playerSetBtn',
+    playerSelectBtnId: 'playerSelectBtn',
     prevData: PREV_DATA, 
   },
   map: {
@@ -81,7 +81,7 @@ try {
   if (err.message === 'reload') {
     alert('リロードしてください');
   }
-  ERROR_MSG.style.display = 'block';
+  ERROR_MSG.innerHTML = 'エラー発生';
   throw new Error(err);
 }
 
@@ -95,16 +95,14 @@ CANVAS.height = CANVAS_HEIGHT;
 C.fillRect(0, 0, CANVAS.width, CANVAS.height);
 // UI マネージャー
 const UI_MANAGER = new UIManager({UIDatabase: UI_DATABASE, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, styleSpace: SPACE})
-const BATTLE_DIALOG = new Log({elemId: 'battleDialogCtr', className: 'battle-dialog', event: EVENT.battleDialog, clearEvent: EVENT.battleEnd});
 const GAME_MANAGER = new GameManager({canvas: CANVAS, canvasContent: C, fps: FPS, offSet: OFFSET, gameDatabase: GAME_DATABASE, transTime: TRANSITION_TIME, pathToImg: PATH_TO_CHAR_IMG, keysId: KEYS_ID});
 
 // ゲームスタート
-GAME_MANAGER.startTitleAnimation();
+GAME_MANAGER.gameStart();
 LOADING_CTR.style.display = 'none';
 
 // リロードの禁止
 window.addEventListener('beforeunload', (e)=> {
   e.preventDefault();
-  console.log(GAME_MANAGER.player.data)
-  localStorage.setItem("prevData", JSON.stringify(GAME_MANAGER.player.data));
+  GAME_MANAGER.saveData();
 });

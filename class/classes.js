@@ -27,6 +27,7 @@ class UICount extends UI {
   setValue(value) {
     this.num = value;
     super.setValue(value);
+    console.log(this.elem)
   }
   countUp(amount) {
     this.setValue(amount? this.num + amount: this.num + 1);
@@ -69,13 +70,6 @@ class Log extends UI {
     const P = document.createElement('p');
     P.className = this.className;
     P.innerHTML = log;
-    if(delay) {
-      setTimeout(()=>{
-        this.elem.append(P);
-        scrollToBottom(this.elem);
-      }, delay)
-      return;
-    }
     this.elem.append(P);
     scrollToBottom(this.elem);
   }
@@ -89,7 +83,6 @@ class Log extends UI {
     this.elem.innerHTML = '';
   }
 }
-
 class Keys {
   static KEYS = {
     up: {
@@ -172,13 +165,13 @@ class ItemCtr {
     this.itemDatabase = itemDatabase;
     this.itemList = [];
   }
-  makeItemList({playerData}) {
+  makeItemList(playerData) {
     console.log(playerData.item)
     this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
       classList: ['item'], itemDatabase: this.itemDatabase })
   }
-  addItem({itemKey}) {
+  addItem(itemKey) {
     this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [itemKey], 
       multiAnswer: true, name: 'battleItem', classList: ['item'], itemDatabase : this.itemDatabase })[0]);
   }
@@ -328,34 +321,83 @@ class UICtr {
 }
 class TitleUICtr extends UICtr {
   static BTN_CLASS = 'title-page__btn';
-  static PLAYER_SEX_OPT = 'player-sex-opt';
-  constructor({ctrId, gameDatabase, titlePageCtrId, titlePageBtnCtrId, startNewGameBtnId, playerSelectCtrId, playerSexOptCtrId, playerNameId, nameErrMsgId, playerSetBtnId, prevData, transTime, styleSpace}) {
+  static PLAYER_SEX_OPT = 'character-opt';
+  constructor({ctrId, gameDatabase, titlePageCtrId, titlePageBtnCtrId, startNewGameBtnId, playerSelectCtrId, characterOptCtrId, playerNameId, nameErrMsgId, playerSelectBtnId, prevData, transTime, styleSpace}) {
     super({ctrId, gameDatabase, transTime, styleSpace});
     this.titlePageCtrUI = new UI(titlePageCtrId);
     this.titlePageBtnCtrUI = new UI(titlePageBtnCtrId);
     this.startNewGameBtnUI = new UI(startNewGameBtnId);
     this.playerSelectCtrUI = new UI(playerSelectCtrId);
-    this.playerSexOptCtrUI = new UI(playerSexOptCtrId);
+    this.characterOptCtrUI = new UI(characterOptCtrId);
     this.playerNameUI = new UI(playerNameId);
     this.nameErrMsgUI = new UI(nameErrMsgId);
-    this.playerSetBtnUI = new UI(playerSetBtnId);
+    this.playerSelectBtnUI = new UI(playerSelectBtnId);
     this.prevData = prevData;
-    this.continueBtn;
+    this.playerData = this.gameDatabase.player.male;
     this.name;
-    this.init();
-    // キャラクター選択肢
-    const PLAYER_SEX_OPT_LIST = addOption({parent: this.playerSexOptCtrUI.elem, childList: Object.keys(this.gameDatabase.player),
+    this.continueBtn;
+
+    this.playerCharacterOptList = addOption({parent: this.characterOptCtrUI.elem, childList: Object.keys(this.gameDatabase.player),
       multiAnswer: false, name: 'playerSelect', classList: [TitleUICtr.PLAYER_SEX_OPT], 
       itemDatabase: this.gameDatabase.player});
-    // イベントリスナー
-    this.startNewGameBtnUI.elem.addEventListener('click', this.handleStartBtnClick.bind(this));
-    for(let opt of PLAYER_SEX_OPT_LIST) {
-      opt.addEventListener('click', this.handleSexSelect.bind(this));
+
+    this.startNewGameBtnUI.elem.addEventListener('click', this.handleNewGameBtnClick.bind(this));
+    for(let opt of this.playerCharacterOptList) {
+      opt.addEventListener('click', this.handleCharacterSelect.bind(this));
     }
-    this.playerNameUI.elem.addEventListener('blur', this.handleInputName.bind(this));
-    this.playerSetBtnUI.elem.addEventListener('click', this.handlePlayerSetBtnClick.bind(this));
+    this.playerNameUI.elem.addEventListener('blur', this.handlePlayerNameInput.bind(this));
+    this.playerSelectBtnUI.elem.addEventListener('click', this.handlePlayerSelectBtnClick.bind(this));
+    
+    EVENT_BUS.subscribe(EVENT.gameStart, this.handleGameStart.bind(this));
   }
-  init() {
+  handleGameStart() {
+    this._init();
+    this._openCtr();
+    this._openTitlePage();
+  }
+  handleNewGameBtnClick() {
+    EVENT_BUS.publish(EVENT.newGame);
+    this._closeTitlePage();
+    this._openPlayerSelectScreen();
+  }
+  handleContinueBtnClick() {
+    this._closeTitlePage();
+    this._closeCtr();
+    EVENT_BUS.publish(EVENT.playerSelect, { playerData: this.prevData });
+  }
+  handleCharacterSelect(e) {
+    const SELECTED_KEY =  e.target.value;
+    const NEW_DATA = this.gameDatabase.player[SELECTED_KEY];
+    const IMAGE_DOWN = NEW_DATA.image.down;
+    if(IMAGE_DOWN === this.playerData.image.down) return;
+    console.log(IMAGE_DOWN)
+    EVENT_BUS.publish(EVENT.characterSelect, { imgSrc: IMAGE_DOWN })
+    this.playerData = NEW_DATA;
+  }
+  handlePlayerNameInput(e) {
+    const VALUE = e.target.value;
+    const VALUE_LEN = VALUE.length;
+    if(VALUE_LEN === 0 || 10 < VALUE_LEN) {
+      this._setNameErrMsg('１〜１０字にしてください');
+      this._disablePlayerSelectBtn();
+      return
+    }
+    if(/\s/.test(VALUE)) {
+      this._setNameErrMsg('スペースは使用できません');
+      this._disablePlayerSelectBtn();
+      return
+    }
+    this._setNameErrMsg('');
+    this.name = VALUE;
+    this._ablePlayerSelectBtn();
+  }
+  handlePlayerSelectBtnClick() {
+    this.playerData.name = this.name;
+    EVENT_BUS.publish(EVENT.playerSelect, { playerData: this.playerData });
+    this._closePlayerSelectScreen();
+    this._closeCtr();
+  }
+  _init() {
     // 過去のデータの有無でコンテニューボタンを設置(撤去)
     if(this.prevData && this.prevData.hp !== 0) {
       if(!this.continueBtn) {
@@ -371,61 +413,35 @@ class TitleUICtr extends UICtr {
     }
 
     // リセット
-    this._openTitlePage();
-    gsap.set(this.playerSelectCtrUI.elem, 
+    this._closeCtr();
+    gsap.set(this.titlePageCtrUI.elem,
       {
         display: 'none'
       }
     )
-    this._disablePlayerSetBtn();
+    gsap.set(this.playerSelectCtrUI.elem,
+      {
+        display: 'none'
+      }
+    )
     this.playerNameUI.elem.innerHTML = '';
     this._setNameErrMsg('');
-  }
-  handleStartBtnClick() {
-    EVENT_BUS.publish(EVENT.newGameStart);
-    this._closeTittlePage();
-    this._openPlayerSelectScreen();
-  }
-  handleContinueBtnClick() {
-    this._closeTittlePage();
-    this._closeCtr();
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.prevData});
-  }
-  handleSexSelect(e) {
-    const SELECTED_KEY =  e.target.value;
-    EVENT_BUS.publish(EVENT.playerSetSex, {key: SELECTED_KEY})
-  }
-  handleInputName(e) {
-    const VALUE = e.target.value;
-    const VALUE_LEN = VALUE.length;
-    if(VALUE_LEN === 0 || 10 < VALUE_LEN) {
-      this._setNameErrMsg('１〜１０字にしてください');
-      this._disablePlayerSetBtn();
-      return
-    }
-    if(/\s/.test(VALUE)) {
-      this._setNameErrMsg('スペースは使用できません');
-      this._disablePlayerSetBtn();
-      return
-    }
-    this._setNameErrMsg('');
-    this.name = VALUE;
-    this._ablePlayerSetBtn();
-  }
-  handlePlayerSetBtnClick() {
-    this._closePlayerSelectScreen();
-    this._closeCtr();
-    EVENT_BUS.publish(EVENT.playerSetName, {name: this.name});
+    this.playerCharacterOptList[0].checked = true;
   }
   _openTitlePage() {
-    gsap.set(this.titlePageCtrUI.elem, 
+    gsap.fromTo(this.titlePageCtrUI.elem, 
       {
         display: '',
-        opacity: 1
+        opacity: 0
+      },
+      {
+        display: '',
+        opacity: 1,
+        duration: this.transTime / 1000
       }
     )
   }
-  _closeTittlePage() {
+  _closeTitlePage() {
     gsap.timeline()
     .to(this.titlePageCtrUI.elem, 
       {
@@ -485,11 +501,11 @@ class TitleUICtr extends UICtr {
       }
     , `+=${this.transTime / 1000}`)
   }
-  _ablePlayerSetBtn() {
-    this.playerSetBtnUI.elem.disabled = false;
+  _ablePlayerSelectBtn() {
+    this.playerSelectBtnUI.elem.disabled = false;
   }
-  _disablePlayerSetBtn() {
-    this.playerSetBtnUI.elem.disabled = true;
+  _disablePlayerSelectBtn() {
+    this.playerSelectBtnUI.elem.disabled = true;
   }
   _setNameErrMsg(msg) {
     this.nameErrMsgUI.elem.innerHTML = msg;
@@ -506,30 +522,51 @@ class MapUICtr extends UICtr {
     this.beatCount = new UICount(beatId);
     this.avgEncCount = new AverageEncounter(avgEncId);
     this.encLog = new Log(encLogCtrId, MapUICtr.ENC_LOG_CLASS);
-    this.init();
+
+    EVENT_BUS.subscribe(EVENT.gameStart, this.handleGameStart.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
-    EVENT_BUS.subscribe(EVENT.mapStart, this.mapStart.bind(this));
     EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
     EVENT_BUS.subscribe(EVENT.step, this.handleStep.bind(this));
     EVENT_BUS.subscribe(EVENT.recoverHp, this.handleRecoverHp.bind(this));
-    EVENT_BUS.subscribe(EVENT.beat, this.handleBeat.bind(this));
+    EVENT_BUS.subscribe(EVENT.attackSuccess, this.handleAttackSuccess.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
   }
-  init() {
-    this._closeCtr();
-    this._closeSideCtr();
-  }
-  mapStart() {
-    this._openCtr();
-    this._openSideCtr();
-  }
-  mapEnd() {
-    this._closeSideCtr();
-    setTimeout(()=>{
-      this._closeCtr();
-    }, this.transTime)
+  handleGameStart() {
+    this._init();
   }
   handlePlayerSelect({playerData}) {
+    this._updatePlayerInfo(playerData);
+  }
+  handleLevelUp({lv}) {
+    this.lvCount.setValue(lv);
+  }
+  handleStep() {
+    console.log('step')
+    this.stepCount.countUp();
+    this.avgEncCount.countUpStep();
+  }
+  handleRecoverHp({amount}) {
+    this.hpCount.countUp(amount);
+  }
+  handleAttackSuccess() {
+    console.log('hi')
+    console.log(this.beatCount.num)
+    this.beatCount.countUp();
+    console.log(this.beatCount.num)
+  }
+  handleEncounter({enemyData}) {
+    this._mapEnd();
+    this.avgEncCount.countUpEncounter();
+    this.encLog.addLog(enemyData.name);
+  }
+  handleBattleEnd({playerData}) {
+    console.log(playerData);
+    this._updatePlayerInfo(playerData);
+    this._mapStart();
+  }
+  _updatePlayerInfo(playerData) {
+    this._mapStart();
     this.lvCount.setValue(playerData.lv);
     this.hpCount.setValue(playerData.hp);
     this.beatCount.setValue(playerData.beat);
@@ -543,24 +580,26 @@ class MapUICtr extends UICtr {
     const ENEMY_LIST = ENEMY_LOG.map(enemyKey => ENEMY_DATABASE[enemyKey].name);
     this.encLogCount.setLog(ENEMY_LIST);
   }
-  handleLevelUp({lv}) {
-    this.lvCount.setValue(lv);
+  _mapStart() {
+    setTimeout(() => {
+      this._openCtr();
+      this._openSideCtr();
+    }, this.transTime)
   }
-  handleStep() {
-    console.log('step')
-    this.stepCount.countUp();
-    this.avgEncCount.countUpStep();
+  _mapEnd() {
+    this._closeSideCtr();
+    setTimeout(()=>{
+      this._closeCtr();
+    }, this.transTime)
   }
-  handleRecoverHp({amount}) {
-    this.hpCount.countUp(amount);
-  }
-  handleBeat() {
-    this.beatCount.countUp();
-  }
-  handleEncounter({enemyKey}) {
-    this.mapEnd();
-    this.avgEncCount.countUpEncounter();
-    this.encLog.addLog(this.gameDatabase.enemy[enemyKey].name);
+  _init() {
+    gsap.set(this.sideCtrUI.elem, 
+      {
+        right: `-${this.sideCtrUI.elem.clientWidth}px`,
+        opacity: 0, 
+      }
+    );
+    this._closeCtr();
   }
   _openSideCtr() {
     gsap.fromTo(this.sideCtrUI.elem, 
@@ -569,7 +608,7 @@ class MapUICtr extends UICtr {
         opacity: 0, 
       },
       {
-        right: '',
+        right: 0,
         opacity: 1,
         duration: this.transTime / 1000
       }
@@ -585,78 +624,120 @@ class MapUICtr extends UICtr {
     );
   }
 }
-// バトル画面UI
 class BattleUICtr extends UICtr {
-  constructor({ctrId, gameDatabase, bottomCtrId, fightOptId, runOptId, diaLogCtrId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, transTime, styleSpace}) {
+  constructor({ctrId, gameDatabase, bottomCtrId, fightOptId, runOptId, dialogCtrId, itemWinId, cocktailId, itemCtrId, itemSetBtnId, transTime, styleSpace}) {
     super({ctrId, gameDatabase, transTime, styleSpace});
     this.bottomCtrUI = new UI(bottomCtrId);
     this.fightOptUI = new UI(fightOptId);
     this.runOptUI = new UI(runOptId);
-    this.diaLogCtrUI = new Log(diaLogCtrId);
+    this.diaLogCtrUI = new Log(dialogCtrId);
     this.itemWinUI = new UI(itemWinId);
     this.cocktailUI = new UI(cocktailId);
     this.itemCtr = new ItemCtr(itemCtrId, gameDatabase.item);
     this.itemSetBtnUI = new UI(itemSetBtnId);
+    this.enemyName;
+    this.cocktailName;
 
-    this._openItemWindowFunc = this._openItemWindow.bind(this); 
-    this._closeItemWindowFunc = this._closeItemWindow.bind(this); 
-    this.runFunc = this.run.bind(this);
+    this.openItemWindow = this._openItemWindow.bind(this); 
+    this.closeItemWindowFunc = this._closeItemWindow.bind(this); 
+    this.handleRunOptClick = this.handleRunOptClick.bind(this);
 
-    this.fightOptUI.elem.addEventListener('click', this._openItemWindowFunc);
-    this.runOptUI.elem.addEventListener('click', this.runFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindow);
+    this.runOptUI.elem.addEventListener('click', this.handleRunOptClick);
+
     this.itemSetBtnUI.elem.addEventListener('click', this.handleItemSetBtnClick.bind(this));
 
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.getItem, this.handleGetItem.bind(this));
     EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
-    EVENT_BUS.subscribe(EVENT.failToRun, this.disableRun.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleReady, this.handleBattleReady.bind(this));
-    this.init();
+    EVENT_BUS.subscribe(EVENT.runSuccess, this.handleRunSuccess.bind(this));
+    EVENT_BUS.subscribe(EVENT.runFail, this.handleRunFail.bind(this));
+    EVENT_BUS.subscribe(EVENT.attackSuccess, this.handleAttackSuccess.bind(this));
+    EVENT_BUS.subscribe(EVENT.attackFail, this.handleAttackFail.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
+    this._init();
   }
-  init() {
+  handlePlayerSelect({playerData}) {
+    this.itemCtr.makeItemList(playerData);
+  }
+  handleGetItem({itemKey}) {
+    this.itemCtr.addItem(itemKey);
+  }
+  handleEncounter({enemyData}){
+    this._init();
+    this.enemyName = enemyData.name;
+    this.cocktailName = enemyData.cocktail.name;
+    this._setCocktailName(this.cocktailName);
+    setTimeout(() => {
+      this._openCtr();
+      this._openBottomCtr();
+      setTimeout(() => {
+        this.diaLogCtrUI.addLog(`${this.enemyName}が現れた`);
+        setTimeout(()=> {
+          this.diaLogCtrUI.addLog(`${this.cocktailName}を飲みたそうにしている`);
+          this._ableRunBtn();
+        }, this.transTime)
+      }, this.transTime)
+    }, this.transTime)
+  }
+  handleRunSuccess() {
+    this.diaLogCtrUI.addLog('・・・');
+    setTimeout(() => {
+      this.diaLogCtrUI.addLog('逃げ切ることができた');
+    }, this.transTime)
+  }
+  handleRunFail() {
+    this.diaLogCtrUI.addLog('・・・');
+    setTimeout(() => {
+      this.diaLogCtrUI.addLog('逃げ切れなかった');
+    }, this.transTime)
+  }
+  handleRunOptClick() {
+    EVENT_BUS.publish(EVENT.run, {});
+    this._disableRunBtn();
+  }
+  handleAttackSuccess() {
+    this.diaLogCtrUI.addLog('・・・');
+    setTimeout(() => {
+      this.diaLogCtrUI.addLog(`${this.enemyName}: こっこれは${this.cocktailName}!美味しそう`);
+    }, this.transTime)
+  }
+  handleAttackFail() {
+    this.diaLogCtrUI.addLog('・・・');
+    setTimeout(() => {
+      this.diaLogCtrUI.addLog(`${this.enemyName}: こんなマズイもん飲めない！<br>攻撃を受けHPが1減った`);
+    }, this.transTime)
+  }
+  handleBattleEnd() {
+    this._closeBottomCtr();
+    this._closeCtr();
+  }
+  handleItemSetBtnClick() {
+    const CHECKED_LIST = this.itemCtr.getCheckedItemName();
+    this._closeItemWindow();
+    this.diaLogCtrUI.addLog(`${CHECKED_LIST.map(itemKey => this.gameDatabase.item[itemKey].name).join('、')}を混ぜた`);
+    EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
+  }
+  _init() {
     this._closeCtr();
     this._closeItemWindow();
 
     this.fightOptUI.elem.checked = false;
     this.runOptUI.elem.checked = false;
     this.runOptUI.elem.disabled = false;
+    this._disableRunBtn();
+    this.diaLogCtrUI.clearLog();
+    this.enemyName = '';
+    this.cocktailName = '';
   }
-  handleEncounter({enemyKey}){
-    setTimeout(() => {
-      this._openCtr();
-      this._openBottomCtr();
-      const ENEMY = this.gameDatabase.enemy[enemyKey];
-      setTimeout(() => {
-        this.diaLogCtrUI.addLog(`${ENEMY.name}が現れた`);
-        setTimeout(()=> {
-          this.diaLogCtrUI.addLog(`${ENEMY.cocktail.name}が現れた`);
-        }, this.transTime)
-      }, this.transTime)
-    }, this.transTime)
+  _setCocktailName(cocktailName) {
+    this.cocktailUI.elem.innerHTML = cocktailName;
   }
-
-  handleBattleReady({cocktail}) {
-    this.cocktailUI.elem.innerHTML = cocktail;
+  _ableRunBtn() {
+    this.runOptUI.elem.disabled = false;
   }
-  handleItemSetBtnClick() {
-    const CHECKED_LIST = this.itemCtr.getCheckedItemName();
-    this._closeItemWindow();
-    EVENT_BUS.publish(EVENT.setItem, {itemList: CHECKED_LIST});
-  }
-  run() {
-    EVENT_BUS.publish(EVENT.run, {});
-  }
-  disableRun() {
+  _disableRunBtn() {
     this.runOptUI.elem.disabled = true;
-  }
-  battleStart() {
-    this.ctrUI.elem.style.display = 'flex';
-    this._openBottomCtr();
-  }
-  battleEnd() {
-    this._closeBottomCtr();
-    setTimeout(()=> {
-      this._closeCtr();
-      this.init();
-    }, this.transTime)
   }
   _openBottomCtr() {
     gsap.fromTo(this.bottomCtrUI.elem,
@@ -690,8 +771,8 @@ class BattleUICtr extends UICtr {
     {
       display: '',
     })
-    window.addEventListener('click', this._closeItemWindowFunc);
-    this.fightOptUI.elem.removeEventListener('click', this._openItemWindowFunc);
+    window.addEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.removeEventListener('click', this.openItemWindowFunc);
   }
   _closeItemWindow(e) {
     if(e) {
@@ -699,17 +780,16 @@ class BattleUICtr extends UICtr {
       if(this.itemWinUI.elem.contains(e.target)
       || this.fightOptUI.elem.closest('label').contains(e.target)) return;
     }
-    gsap.to(`#${this.itemWinUI.elemId}`, 
+    gsap.set(`#${this.itemWinUI.elemId}`, 
     {
       display: 'none',
     })
     this.fightOptUI.elem.checked = false;
-    window.removeEventListener('click', this._closeItemWindowFunc);
-    this.fightOptUI.elem.addEventListener('click', this._openItemWindowFunc);
+    window.removeEventListener('click', this.closeItemWindowFunc);
+    this.fightOptUI.elem.addEventListener('click', this.openItemWindowFunc);
     this.itemCtr.resetChecked();
   }
 }
-// 全体
 class UIManager {
   constructor({
     UIDatabase = UI_MGR_INTERFACE,
@@ -725,32 +805,17 @@ class UIManager {
     this.gameDatabase = gameDatabase;
     this.transTime = transTime;
     this.styleSpace = styleSpace;
-    this.init();
-  }
 
-  init() {
-    // コンテナ
-    EVENT_BUS.subscribe(EVENT.mapEnd, this.mapEnd.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleStart, this.battleStart.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleEnd, this.battleEnd.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.overlapScreen.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.overlapScreen.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.overlapScreen.bind(this));
 
-    // オーバーラップメッセージ
     EVENT_BUS.subscribe(EVENT.getItem, this.getItem.bind(this));
     EVENT_BUS.subscribe(EVENT.recoverHp, this.recoverHp.bind(this));
-    EVENT_BUS.subscribe(EVENT.loseHp, this.loseHp.bind(this));
     EVENT_BUS.subscribe(EVENT.levelUp, this.levelUp.bind(this));
   }
-
-  mapEnd() {
+  overlapScreen() {
     this.overlap.circle();
-    this.mapMgr.mapEnd();
-  }
-  battleStart() {
-    this.battleMgr.battleStart();
-  }
-  battleEnd() {
-    this.overlap.circle();
-    this.battleMgr.battleEnd();
   }
   getItem({itemKey}) {
     if(!itemKey) {
@@ -766,14 +831,6 @@ class UIManager {
       return;
     }
     const MSG = `${reason}HPを${amount}回復した`;
-    this.overlap.showMsg(MSG);
-  }
-  loseHp({amount, reason}) {
-    if(!amount || !reason) {
-      console.log('Error at loseHp Event: amount or reason is not found');
-      return;
-    }
-    const MSG = `${reason}HPを${amount}失った`;
     this.overlap.showMsg(MSG);
   }
   levelUp({lv}) {
@@ -799,18 +856,15 @@ class GameManager {
     this.pathToImg = pathToImg;
     this.keys = new Keys({...keysId});
     this.player;
-    this.titleAnimation = new TittleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
+    this.titleAnimation = new TitleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
     this.battleAnimation = new BattleAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, gameDatabase: this.gameDatabase, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
     this.mapAnimation;
 
-    EVENT_BUS.subscribe(EVENT.getItem, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.recoverHp, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.loseHp, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.drinkWater, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.takeNap, this.showFullMsg.bind(this));
-    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
-    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleEndBattle.bind(this));
     EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+  }
+  gameStart() {
+    this._init();
+    EVENT_BUS.publish(EVENT.gameStart, {});
   }
   handlePlayerSelect({playerData}) {
     const PLAYER_SPRITES = {};
@@ -821,50 +875,24 @@ class GameManager {
     } 
     this.player = new Player({canvas:this.canvas, canvasContent: this.c, position: {x:0,y:0}, image:PLAYER_SPRITES.down , data: playerData, pathToImg: this.pathToImg, sprite:PLAYER_SPRITES});
     this.mapAnimation = new MapAnimation({canvas:this.canvas, canvasContent: this.c, fps: this.fps, offSet: this.offSet, gameDatabase: this.gameDatabase, player: this.player, keyEvent: this.keys, keys: this.keys, pathToImg: this.pathToImg, transTime: this.transTime});
-    this.endTitleAnimation();
-    this.startMapAnimation();
+    // playerSelectのイベント発火後にmapAnimationが作成されるため
+    setTimeout(() => {
+      this._clearCanvas();
+      this.mapAnimation.animate();
+    }, this.transTime)
   }
-  startTitleAnimation() {
-    this.titleAnimation.animate();
-  }
-  endTitleAnimation() {
-    this.titleAnimation.stopCurrAnimation();
-  }
-  startMapAnimation() {
-    this.mapAnimation.animate();
-    EVENT_BUS.publish(EVENT.mapStart, {});
-    if(this.player.levelUp()) {
-      setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
-      }, this.transTime)
-    }
-  }
-  stopMapAnimation() {
-    this.mapAnimation.stopCurrAnimation();
-    EVENT_BUS.publish(EVENT.mapEnd, {});
-  }
-  startBattleAnimation() {
-    this.battleAnimation.animate(this.player.data);
-    EVENT_BUS.publish(EVENT.battleStart, {});
+  saveData() {
+    localStorage.setItem("prevData", JSON.stringify(this.player.data));
   }
   stopBattleAnimation() {
-    this.battleAnimation.stopCurrAnimation();
+    this.battleAnimation._stopCurrAnimation();
   }
-  handleEncounter() {
-    this.stopMapAnimation();
-    setTimeout(this.startBattleAnimation.bind(this), this.transTime)
+  _init() {
+    this.player;
+    this.mapAnimation;
   }
-  handleEndBattle({playerData}) {
-    if(!this.player.updateData(playerData)) {
-      console.log('error at handleEndBattle in GameManager');
-      return;
-    };
-    this.stopBattleAnimation();
-    setTimeout(this.startMapAnimation.bind(this), this.transTime)
-  }
-  showFullMsg() {
-    this.mapAnimation.stopCurrAnimation();
-    setTimeout(this.startMapAnimation.bind(this), this.transTime);
+  _clearCanvas() {
+    this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 }
 
@@ -895,6 +923,7 @@ class Animation {
     this.lag += ELAPSED_TIME;
   }
   animate() {
+    this._clearCanvas();
     this.preTime = new Date().getTime();
     this._animate();
   } 
@@ -909,49 +938,23 @@ class Animation {
     this._render();
   }
   _update() {
-
   }
   _render() {
-
   }
-  stopCurrAnimation() {
+  _clearCanvas() {
+    this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+  _stopCurrAnimation() {
     window.cancelAnimationFrame(this.animationId);
   }
 }
-class TittleAnimation extends Animation {
+class TitleAnimation extends Animation {
   static BG_SRC = './img/map/map.png';
   static BG_FRAME = 2;
   static BG_MOVING = true;
-  constructor({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime}) {
-    super({canvas, canvasContent, fps, offSet, gameDatabase, player, keyEvent, keys, pathToImg, transTime});
-    this.bg;
-    this.player;
-    this.playerSelectPage = false;
-    this.positionXDiff;
-    this.positionYDiff;
-    this.drawWidthDiff;
-    this.drawHeightDiff;
-
-    EVENT_BUS.subscribe(EVENT.newGameStart, ()=>{
-      this.playerSelectPage = true
-    })
-    EVENT_BUS.subscribe(EVENT.playerSetSex, this.setSex.bind(this));
-    EVENT_BUS.subscribe(EVENT.playerSetName, this.setName.bind(this));
-    this.init();
-  }
-  setSex({key}) {
-    const NEW_PLAYER_DATA = {...this.gameDatabase.player[key]};
-    if(this.player.data.image.down === NEW_PLAYER_DATA.image.down) return;
-    this.player.updateData(NEW_PLAYER_DATA);
-  }
-  setName({name}) {
-    if(!this.player.editData({key: 'name', newValue: name})) {
-      throw new Error('Error at editData in Character class');
-    }
-    EVENT_BUS.publish(EVENT.playerSelect, {playerData: this.player.data})
-  }
-  init() {
-    // 固定背景の作成
+  static PLAYER_IMG_SRC = 'mainMFront.png';
+  constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime}) {
+    super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     const IMG_BG = new Image();
     this.bg = new Sprite({
       canvas: this.canvas,
@@ -961,32 +964,63 @@ class TittleAnimation extends Animation {
         y: 0
       },
       image: IMG_BG,
-      frames: {max: TittleAnimation.BG_FRAME},
-      moving: TittleAnimation.BG_MOVING,
+      frames: {max: TitleAnimation.BG_FRAME},
+      moving: TitleAnimation.BG_MOVING,
     });
-    IMG_BG.src = TittleAnimation.BG_SRC;
-    this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
+    IMG_BG.src = TitleAnimation.BG_SRC;
+    this.player;
+    this.playerSelectPage = false;
+    // ゲームスタート開始時との差(_updateで使用)
+    this.drawWidthDiff;
+    this.drawHeightDiff;
     this.positionXDiff = this.offSet.x - this.bg.position.x;
     this.positionYDiff = this.offSet.y - this.bg.position.y;
-    this.drawWidthDiff = IMG_BG.width / TittleAnimation.BG_FRAME - this.canvas.width;
-    this.drawHeightDiff = IMG_BG.height - this.canvas.height;
-    const PLAYER_IMG = new Image();
-    this.player = new Player({
-      canvas: this.canvas,
-      canvasContent: this.c,
-      position: {
-        x:0,
-        y:0,
-      },
-      image: PLAYER_IMG,
-      moving: true,
-      movementDelay: 10,
-      data: {...this.gameDatabase.player.male},
-      pathToImg: this.pathToImg,
-    })
-    PLAYER_IMG.src = this.pathToImg + this.gameDatabase.player.male.image.down;
+
+    EVENT_BUS.subscribe(EVENT.gameStart, this.handleGameStart.bind(this));
+    EVENT_BUS.subscribe(EVENT.newGame, this.handleNewGame.bind(this));
+    EVENT_BUS.subscribe(EVENT.characterSelect, this.handleCharacterSelect.bind(this));
+    EVENT_BUS.subscribe(EVENT.playerSelect, this.handlePlayerSelect.bind(this));
+  }
+  handleGameStart() {
+    this._init();
+    this._clearCanvas();
+    this.animate();
+  }
+  handleNewGame() {
+    this.playerSelectPage = true;
+  }
+  handleCharacterSelect({imgSrc}) {
+    this.player.updateImg(this.pathToImg + imgSrc);
+  }
+  handlePlayerSelect() {
+    this._stopCurrAnimation();
+  }
+  _init() {
+    if(!this.player){
+      const PLAYER_IMG = new Image();
+      this.player = new Player({
+        canvas: this.canvas,
+        canvasContent: this.c,
+        position: {
+          x:0,
+          y:0,
+        },
+        image: PLAYER_IMG,
+        moving: true,
+        movementDelay: 10,
+        data: {...PLAYER_DATA_TYPE},
+        pathToImg: this.pathToImg,
+      })
+      PLAYER_IMG.src = this.pathToImg + TitleAnimation.PLAYER_IMG_SRC;
+    }else {
+      this.player.updateImg(this.pathToImg + TitleAnimation.PLAYER_IMG_SRC);
+    }
+    this.playerSelectPage = false;
+    this.bg.updateDrawSize({width: this.canvas.width, height: this.canvas.height});
+    this.bg.updatePosition({x: 0, y: 0});
   }
   _update() {
+    if(!this.playerSelectPage) return;
     while(!this.drawWidthDiff || !this.drawHeightDiff) {
       this.drawWidthDiff = this.bg.width  - this.canvas.width;
       this.drawHeightDiff = this.bg.height - this.canvas.height;
@@ -1031,7 +1065,7 @@ class MapAnimation extends Animation {
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime, player}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.player = player;
-    this.listMovable = [];
+    this.enemyList = [];
     this.itemList = [];
     this.action = {
       lastTime: 0,
@@ -1052,41 +1086,14 @@ class MapAnimation extends Animation {
       lastTime: 0,
       interval: MapAnimation.MAP_EVENT_INTERVAL
     }
-    // 衝突検出用マップ
-    this.boundaryMap;
-    this.pathMap;
-    this.forestMap;
-    this.itemMap;
-    this.waterMap;
-    this.napMap;
-    // 固定背景
-    this.bg;
-    this.bgMoving = MapAnimation.BG_MOVING;
-    this.fg;
-    this.init();
-
-    EVENT_BUS.subscribe(EVENT.levelUp, this.makeListItem.bind(this));
-  }
-  makeListItem({lv}) {
-    if(!lv) throw new Error('Error at levelUp Event: lv is not found');
-    // keyで管理
-    const ITEM_DATABASE = this.gameDatabase.item;
-    for(let key in ITEM_DATABASE) {
-      if(ITEM_DATABASE[key].lv === lv) {
-        this.itemList.push(key);
-      }
-    }
-  }
-  init() {
-    // 衝突検出用マップの作成
+    
     this.boundaryMap = makeMap({array: COLLISION, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.pathMap = makeMap({array: PATH, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.forestMap = makeMap({array: FOREST, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.itemMap = makeMap({array: ITEM, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.waterMap = makeMap({array: WATER, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.napMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
-
-    // 固定背景の作成
+    
     const IMG_BG = new Image();
     this.bg = new Sprite({
       canvas: this.canvas,
@@ -1111,11 +1118,78 @@ class MapAnimation extends Animation {
       image: IMG_FG_OBJ
     });
     IMG_FG_OBJ.src = MapAnimation.FG_SRC;
-
-    this.makeListItem({lv: this.player.data.lv})
-
-    // プレイヤーの動きに合わせて動かす物
+    
     this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
+
+    EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
+
+    this._makeEnemyList(this.player.data.lv);
+    this._makeItemList(this.player.data.lv);
+  }
+  init() {
+    // reset
+    this.enemyList = [];
+    this.itemList = [];
+    this.action.lastTime = 0;
+    this.item.lastTime = 0;
+    this.water.lastTime = 0;
+    this.nap.lastTime = 0;
+  }
+  handleLevelUp({lv}) {
+    this._stopAnimationFor(this.transTime);
+    this._makeEnemyList(lv);
+    this._makeItemList(lv);
+  }
+  handleRecoverHp() {
+    this._stopAnimationFor(this.transTime);
+  }
+  handleEncounter() {
+    console.log('stop map animation')
+    this._stopCurrAnimation();
+  }
+  handleBattleEnd({playerData}) {
+    if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at MapAnimation.handleBattleEnd')
+    setTimeout(() => {
+      this._mapStart();
+    }, this.transTime)
+  }
+  _mapStart() {
+    super.animate();
+    if(!this.player.levelUp()) return;
+    setTime(() => {
+      EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
+    }, this.transTime)
+  }
+  _stopAnimationFor(millisecond) {
+    this._stopCurrAnimation();
+    setTimeout(() => {
+      this.animate();
+    }, millisecond)
+  }
+  _makeEnemyList(lv) {
+      const ENEMY_DATABASE = this.gameDatabase.enemy;
+      for(let key in ENEMY_DATABASE) {
+        if(!this.enemyList) {
+          // ゲームスタート時
+          if(ENEMY_DATABASE[key].lv <= lv) {
+            this.enemyList.push(key);
+          }
+        }else {
+          if(ENEMY_DATABASE[key].lv === lv) {
+            this.enemyList.push(key);
+          }
+        }
+      }
+  }
+  _makeItemList(lv) {
+      const ITEM_DATABASE = this.gameDatabase.item;
+      for(let key in ITEM_DATABASE) {
+        if(ITEM_DATABASE[key].lv === lv) {
+          this.itemList.push(key);
+        }
+      }
   }
   _update() {
     // アニメーションのアップデート
@@ -1237,6 +1311,7 @@ class MapAnimation extends Animation {
             this.action.lastTime = this.currTime;
             this.item.lastIndex = i;
             EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY });
+            this._stopAnimationFor(this.transTime);
             return;
           };
         }
@@ -1259,6 +1334,7 @@ class MapAnimation extends Animation {
               this.action.lastTime = this.currTime;
               this.water.lastIndex = i;
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: '水を飲んで' });
+              this._stopAnimationFor(this.transTime);
               return;
             };
           }
@@ -1278,6 +1354,7 @@ class MapAnimation extends Animation {
               this.nap.lastTime = this.currTime;
               this.nap.lastIndex = i;
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
+              this._stopAnimationFor(this.transTime);
               return;
             };
           }
@@ -1302,7 +1379,7 @@ class MapAnimation extends Animation {
         this.keys.lastKey = undefined;
         this.action.lastTime = new Date().getTime();
         const ENEMY_KEY = choiceRandom(this.enemyList);
-        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyKey: ENEMY_KEY});
+        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData:this.gameDatabase.enemy[ENEMY_KEY]});
       }
     }
   }
@@ -1352,43 +1429,81 @@ class BattleAnimation extends Animation {
       moving: BattleAnimation.BG_MOVING
     });
     IMG_BG.src = BattleAnimation.BG_SRC;
-    // プレイヤー
     const IMG_PLAYER = new Image();
     this.player = new CharacterBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_PLAYER,
-      data: PLAYER_DATA_TYPE,
+      data: {...PLAYER_DATA_TYPE},
       pathToImg: this.pathToImg,
       bottom: Math.round(this.canvas.height * 0.3 * 10) / 10
     });
     IMG_PLAYER.src = this.pathToImg + BattleAnimation.PLAYER_IMG_SRC;
-    // 敵
     const IMG_ENEMY = new Image();
     this.enemy = new CharacterBattle({
       canvas: this.canvas,
       canvasContent: this.c,
       image: IMG_ENEMY,
-      data: ENEMY_DATA_TYPE,
+      data: {...ENEMY_DATA_TYPE},
       isPlayer: false,
       pathToImg: this.pathToImg,
     });
     IMG_ENEMY.src = this.pathToImg + BattleAnimation.ENEMY_IMG_SRC;
 
-    EVENT_BUS.subscribe(EVENT.encounter, this.animate.bind(this));
-    EVENT_BUS.subscribe(EVENT.run, this.run.bind(this));
-    EVENT_BUS.subscribe(EVENT.setItem, this.setItem.bind(this));
-
-    this.init();
+    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
+    EVENT_BUS.subscribe(EVENT.run, this.handleRun.bind(this));
+    EVENT_BUS.subscribe(EVENT.setItem, this.handleSetItem.bind(this))
   }
-  init() {
-  }
-  animate({playerData, enemyKey}) {
+  handleEncounter({playerData, enemyData}) {
     if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
-    if(!this.enemy.updateData(this.gameDatabase.enemy[enemyKey])) throw new Error('Fail to Update Player Data at BattleAnimation.animate');
+    if(!this.enemy.updateData(enemyData)) throw new Error('Fail to Update Enemy Data at BattleAnimation.animate');
+    // 敵のデータ追加
+    
     setTimeout(() => {
+      console.log('battle animation');
+      this._clearCanvas();
       super.animate();
     }, this.transTime)
+  }
+  handleRun() {
+    if(this.player.run()) {
+      EVENT_BUS.publish(EVENT.runSuccess, {});
+      setTimeout(()=>{
+        EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data});
+        this._stopCurrAnimation();
+      }, this.transTime * 2)
+    }else {
+      EVENT_BUS.publish(EVENT.runFail, {});
+    }
+  }
+  handleSetItem({itemList}) {
+    if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
+      const BEAT  = this.player.data.beat + 1
+      this.player.editData({key: 'beat', newValue: BEAT });
+      EVENT_BUS.publish(EVENT.attackSuccess, {});
+      setTimeout(()=>{
+        this.enemy.loseHp();
+        setTimeout(()=> {
+          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data});
+          this._stopCurrAnimation();
+        }, this.transTime * 2)
+      }, this.transTime)
+    }else {
+      EVENT_BUS.publish(EVENT.attackFail, {});
+      setTimeout(()=>{
+        if(this.player.loseHp().hp === 0) {
+          setTimeout(() => {
+            EVENT_BUS.publish(EVENT.gameOver, {});
+          }, this.transTime * 2)
+        }else {
+          setTimeout(() => {
+            EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data});
+            this._stopCurrAnimation();
+          }, this.transTime * 2)
+        }
+      }, this.transTime)
+    }
+
   }
   _update() {
     // console.log('update')
@@ -1397,50 +1512,6 @@ class BattleAnimation extends Animation {
     this.bg.draw();
     this.enemy.draw();
     this.player.draw();
-  }
-  dotsDialog() {
-    EVENT_BUS.publish(EVENT.battleDialog, {log: '・・・'});
-  }
-  run() {
-    this.dotsDialog();
-    if(this.player.run()) {
-      setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切ることができた！'});
-        // addLog
-        setTimeout(() => {
-          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: false});
-        }, this.transTime)
-      }, this.transTime)
-    }else {
-      setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.battleDialog, {log: '逃げ切れなかった...'});
-        EVENT_BUS.publish(EVENT.failToRun, {});
-      }, this.transTime)
-    }
-  }
-  setItem({itemList}) {
-    this.dotsDialog();
-    EVENT_BUS.publish(EVENT.battleDialog, {log: `${itemList.map(item=>this.gameDatabase.item[item].name).join('、')}を混ぜた`});
-    if(containsSame({list1: itemList, list2: this.enemy.data.cocktail.ingredient})) {
-      setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.battleDialog, {log: `${this.enemy.data.name}>こっこれは${this.enemy.data.cocktail.name}!美味しそう`});
-        this.enemy.loseHp();
-        this.player.editData({key: 'beat', newValue: this.player.data.beat++});
-        setTimeout(()=> {
-          EVENT_BUS.publish(EVENT.battleEnd, {playerData: this.player.data, enemy: this.enemy, log: this.enemy.data.name, beat: true});
-        }, this.transTime)
-      }, this.transTime)
-    }else {
-      setTimeout(()=>{
-        EVENT_BUS.publish(EVENT.battleDialog, 
-          {log: `${this.enemy.data.name}>こんなマズイもん飲めない！<br>攻撃を受けHPが1減った`});
-        if(this.player.loseHp().hp === 0) {
-          // game over
-          console.log('game over');
-        }
-      }, this.transTime)
-    }
-
   }
 }
 

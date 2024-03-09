@@ -46,7 +46,7 @@ const ENEMY_DATA_TYPE = {
       ingredient: []
   },
   hp: 1,
-  rank: 0
+  lv: 0
 }
 
 const UI_MGR_INTERFACE = {
@@ -89,36 +89,23 @@ const UI_MGR_INTERFACE = {
 
 
 const EVENT = {
-  // game start
-  newGameStart: 'newGameStart',
-  playerSetSex: 'playerSetSex',
-  playerSetName: 'playerSetName',
+  gameStart: 'gameStart',
+  newGame: 'newGame',
+  characterSelect: 'characterSelect',
   playerSelect: 'playerSelect',
-  // map
-  mapStart: 'mapStart',
-  mapEnd: 'mapEnd',
-  down: 'down',
-  up: 'up',
-  left: 'left',
-  right: 'right',
   step: 'step',
   encounter: 'encounter',
   beat: 'beat',
   levelUp: 'levelUp',
   getItem: 'itemGet',
-  drinkWater: 'drinkWater',
-  takeNap: 'takeNap',
-  // 
-  loseHp: 'loseHp',
   recoverHp: 'recoverHp',
-  // battle
-  battleStart: 'battleStart',
-  battleEnd: 'battleEnd',
-  battleDialog: 'battleDialog',
-  battleReady: 'battleReady',
   setItem: 'setItem',
+  attackFail: 'attackFail',
+  attackSuccess: 'attackSuccess',
   run: 'run',
-  failToRun: 'failToRun',
+  runFail: 'runFail',
+  runSuccess: 'runSuccess',
+  gameOver: 'gameOver'
 }
 const KEYS_INTERFACE = {
   downKeyId: '', 

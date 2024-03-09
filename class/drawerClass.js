@@ -110,8 +110,8 @@ class Character extends Sprite {
     this.data = data? data: this.isPlayer? PLAYER_DATA_TYPE: ENEMY_DATA_TYPE;
     this.pathToImg = pathToImg;
   }
-  updateImage() {
-    const SRC = this.pathToImg + this.data.image.down;
+  updateImg(src) {
+    const SRC = (src?src:this.pathToImg + this.data.image.down);
     const IMAGE = new Image();
     IMAGE.onload = () => {
       this._handleImageOnLoad();
@@ -141,7 +141,7 @@ class Character extends Sprite {
       for(let key in newData) {
         this.data[key] = newData[key];
       }
-      this.updateImage();
+      this.updateImg();
       return true;
     }else {
       console.log('Input object does not have the same keys as class data.');
@@ -335,7 +335,7 @@ class CharacterBattle extends Character {
     } 
     
   }
-  updateImage() {
+  updateImg() {
     const SRC = this.pathToImg + (this.isPlayer?this.data.image.up:this.data.image.down);
     const IMAGE = new Image();
     IMAGE.onload = () => {
