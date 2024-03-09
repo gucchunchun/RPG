@@ -1,5 +1,5 @@
-import { UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../types.js";
-import { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom } from '../utils.js';
+import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "../js/types.js";
+import { rectCollision, trueWithRatio } from '../js/utils.js';
 
 
 class Boundary {

@@ -1,4 +1,4 @@
-import { fetchJsonData } from './fetchData.js';
+import { fetchJsonData } from './js/fetchData.js';
 import { UIManager, GameManager } from './class/classes.js';
 
 // グローバル設定

@@ -1,7 +1,7 @@
-import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../types.js";
+import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../js/types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from '../data/boundaries.js';
-import { makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../utils.js';
-import { Boundary, Sprite, Character, Player, PlayerBattle, EnemyBattle } from './drawerClass.js';
+import { makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../js/utils.js';
+import { Sprite, Player, PlayerBattle, EnemyBattle } from './drawerClass.js';
 import { EventBus } from './eventBus.js';
 import { gsap } from '../node_modules/gsap/index.js';
 
@@ -1047,7 +1047,7 @@ class MapAnimation extends Animation {
   static BG_FRAME = 2;
   static BG_MOVING = true;
   static FG_SRC = './img/map/map--foreground.png';
-  static MAP_EVENT_INTERVAL = 3000;
+  static MAP_EVENT_INTERVAL = 5000;
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime, player}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.player = player;
@@ -1280,6 +1280,8 @@ class MapAnimation extends Animation {
     }
     }
 
+    if(this.action.lastTime !== 0 && (this.currTime - this.action.lastTime) < this.action.interval) return;
+
     // アイテムゲット
     if(this.item.lastTime === 0 || this.item.interval <= (this.currTime - this.item.lastTime)) {
       for(let i = 0; i < this.itemMap.length; i++) {
@@ -1340,6 +1342,7 @@ class MapAnimation extends Animation {
             const RESULT = this.player.recoverHp(2);
             if(RESULT) {
               this.nap.lastTime = this.currTime;
+              this.action.lastTime = this.currTime;
               this.nap.lastIndex = i;
               this.player.recoverHp(RESULT.amount);
               EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
@@ -1355,6 +1358,7 @@ class MapAnimation extends Animation {
     if(stepped) {
       EVENT_BUS.publish(EVENT.step, {});
       if(this.player.levelUp()) {
+        this.action.lastTime = this.currTime;
         setTimeout(()=>{
           EVENT_BUS.publish(EVENT.levelUp, {lv: this.player.data.lv});
         }, this.transTime)
