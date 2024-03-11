@@ -1,14 +1,15 @@
 import { Boundary } from '../class/drawerClass.js';
 
-function rectCollision({rect1, rect2}) {
-  const RESULT = (rect2.position.x <= rect1.position.x + rect1.width && 
+function areRectsColliding({rect1, rect2}) {
+  const ARE_COLLIDING = (rect2.position.x <= rect1.position.x + rect1.width && 
   rect1.position.x <= rect2.position.x + rect2.width &&
   rect2.position.y <= rect1.position.y + rect1.height &&
   rect1.position.y <= rect2.position.y + rect2.height);
-  return RESULT;
+  return ARE_COLLIDING;
 }
 function makeMap({array, canvas, canvasContent, offset}) {
   const ARRAY_MAP = [];
+  // 70 = タイルのカラム数
   for(let i = 0; i < array.length; i += 70) {
     ARRAY_MAP.push(array.slice(i, i + 70));
   }
@@ -29,20 +30,17 @@ function makeMap({array, canvas, canvasContent, offset}) {
   })
   return MAP;
 }
-function trueWithRatio(ratio) {
+function isTrueWithProbability(ratio) {
   const RANDOM_NUM = Math.random();
-  if (RANDOM_NUM < ratio) {
-      return true; 
-  } else {
-      return false; 
-  }
+  if(RANDOM_NUM <= ratio) return true;
+  return false;
 }
-function choiceRandom(array) {
-  const INDEX = Math.round(Math.random() * (array.length - 1));
-  const RESULT = array[INDEX];
-  return RESULT;
+function randomChoiceFromArray(array) {
+  const CHOSEN_INDEX = Math.round(Math.random() * (array.length - 1));
+  const CHOSEN_ELEMENT = array[CHOSEN_INDEX];
+  return CHOSEN_ELEMENT;
 }
-function addOption({parent, childList, multiAnswer, name, classList, itemDatabase}) {
+function addOption({parent, childList, multiAnswer, name, classList, optionDatabase}) {
   const NODE_LIST = [];
   let type = 'radio';
   if(multiAnswer) {
@@ -55,7 +53,7 @@ function addOption({parent, childList, multiAnswer, name, classList, itemDatabas
     }
     LABEL.classList.add('option__label');
     const SPAN = document.createElement('span');
-    SPAN.innerHTML = itemDatabase? itemDatabase[child].name : child;
+    SPAN.innerHTML = optionDatabase? optionDatabase[child].name : child;
     LABEL.appendChild(SPAN);
     const INPUT = document.createElement('input');
     INPUT.id = child;
@@ -109,4 +107,4 @@ function isNumCloseToTargetNum(num, targetNum, criteria) {
   if(targetNum - criteria <= num && num < targetNum + criteria) return true;
   return false;
 }
-export { isNumCloseToTargetNum, rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };
+export { isNumCloseToTargetNum, areRectsColliding, makeMap, isTrueWithProbability, randomChoiceFromArray, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };

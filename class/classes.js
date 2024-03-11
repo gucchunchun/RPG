@@ -1,6 +1,6 @@
 import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../js/types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from '../data/boundaries.js';
-import {isNumCloseToTargetNum,  makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../js/utils.js';
+import {isNumCloseToTargetNum,  makeMap, isTrueWithProbability, randomChoiceFromArray, addOption, containsSame, scrollToBottom } from '../js/utils.js';
 import { Sprite, Player, PlayerBattle, EnemyBattle } from './drawerClass.js';
 import { EventBus } from './eventBus.js';
 import { gsap } from '../node_modules/gsap/index.js';
@@ -167,11 +167,11 @@ class ItemCtr {
   makeItemList(playerData) {
     this.itemList = addOption({parent: this.itemCtr.elem, childList: playerData.item, 
       multiAnswer: true, name: 'battleItem',
-      classList: ['item'], itemDatabase: this.itemDatabase })
+      classList: ['item'], optionDatabase: this.itemDatabase })
   }
   addItem(itemKey) {
     this.itemList.push(addOption({parent: this.itemCtr.elem, childList: [itemKey], 
-      multiAnswer: true, name: 'battleItem', classList: ['item'], itemDatabase : this.itemDatabase })[0]);
+      multiAnswer: true, name: 'battleItem', classList: ['item'], optionDatabase: this.itemDatabase })[0]);
   }
   getCheckedItemName() {
     const SELECTED = this.itemList.filter(item=>item.checked).map(item=>item.value);
@@ -326,7 +326,7 @@ class TitleUICtr extends UICtr {
 
     this.playerCharacterOptList = addOption({parent: this.characterOptCtrUI.elem, childList: Object.keys(this.gameDatabase.player),
       multiAnswer: false, name: 'playerSelect', classList: [TitleUICtr.PLAYER_SEX_OPT], 
-      itemDatabase: this.gameDatabase.player});
+      optionDatabase: this.gameDatabase.player});
 
     this.startNewGameBtnUI.elem.addEventListener('click', this.handleNewGameBtnClick.bind(this));
     for(let opt of this.playerCharacterOptList) {
@@ -1051,8 +1051,8 @@ class MapAnimation extends Animation {
   constructor({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime, player}) {
     super({canvas, canvasContent, fps, offSet, gameDatabase, keyEvent, keys, pathToImg, transTime});
     this.player = player;
-    this.enemyList = [];
-    this.itemList = [];
+    this.enemyKeyList = [];
+    this.itemKeyList = [];
     this.action = {
       lastTime: 0,
       interval: MapAnimation.MAP_EVENT_INTERVAL
@@ -1098,13 +1098,13 @@ class MapAnimation extends Animation {
     EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
 
-    this._makeEnemyList(this.player.data.lv);
-    this._makeItemList(this.player.data.lv);
+    this._makeEnemyKeyList(this.player.data.lv);
+    this._makeItemKeyList(this.player.data.lv);
   }
   handleLevelUp({lv}) {
     this._stopAnimationFor(this.transTime);
-    this._makeEnemyList(lv);
-    this._makeItemList(lv);
+    this._makeEnemyKeyList(lv);
+    this._makeItemKeyList(lv);
   }
   handleRecoverHp() {
     this._stopAnimationFor(this.transTime);
@@ -1128,34 +1128,34 @@ class MapAnimation extends Animation {
       this.animate();
     }, millisecond)
   }
-  _makeEnemyList(lv) {
+  _makeEnemyKeyList(lv) {
       const ENEMY_DATABASE = this.gameDatabase.enemy;
-      const IS_LIST_EMPTY = this.enemyList.length === 0;
+      const IS_LIST_EMPTY = this.enemyKeyList.length === 0;
       for(let key in ENEMY_DATABASE) {
         if(IS_LIST_EMPTY) {
           // ゲームスタート時
           if(ENEMY_DATABASE[key].lv <= lv) {
-            this.enemyList.push(key);
+            this.enemyKeyList.push(key);
           }
         }else {
           if(ENEMY_DATABASE[key].lv === lv) {
-            this.enemyList.push(key);
+            this.enemyKeyList.push(key);
           }
         }
       }
   }
-  _makeItemList(lv) {
+  _makeItemKeyList(lv) {
       const ITEM_DATABASE = this.gameDatabase.item;
-      const IS_LIST_EMPTY = this.itemList.length === 0;
+      const IS_LIST_EMPTY = this.itemKeyList.length === 0;
       for(let key in ITEM_DATABASE) {
         if(IS_LIST_EMPTY) {
           // ゲームスタート時
           if(ITEM_DATABASE[key].lv <= lv) {
-            this.itemList.push(key);
+            this.itemKeyList.push(key);
           }
         }else {
           if(ITEM_DATABASE[key].lv === lv) {
-            this.itemList.push(key);
+            this.itemKeyList.push(key);
           }
         }
       }
@@ -1300,7 +1300,7 @@ class MapAnimation extends Animation {
     if(this.indexOfLastWaterStation) {
       if(isNumCloseToTargetNum(INDEX_ITEM_MAP, this.indexOfLastWaterStation, 2)) return false;
     }
-    const ITEM_KEY = choiceRandom(this.itemList);
+    const ITEM_KEY = randomChoiceFromArray(this.itemKeyList);
     if(this.player.addItem(ITEM_KEY)) {
       this.indexOfLastItem = INDEX_ITEM_MAP;
       this.action.lastTime = this.currTime;
@@ -1346,11 +1346,11 @@ class MapAnimation extends Animation {
     return true;
   }
   _playerEncounterEnemy(encounterRatio) {
-    if(!trueWithRatio(encounterRatio)) return false;
+    if(!isTrueWithProbability(encounterRatio)) return false;
     this.player.stop();
     this.keys.lastKey = undefined;
     this.action.lastTime = this.currTime;
-    const ENEMY_KEY = choiceRandom(this.enemyList);
+    const ENEMY_KEY = randomChoiceFromArray(this.enemyKeyList);
     this.player.data.enemy.push(ENEMY_KEY);
     EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: {...this.gameDatabase.enemy[ENEMY_KEY]}});
     return true;

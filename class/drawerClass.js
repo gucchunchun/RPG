@@ -1,5 +1,5 @@
 import { CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE } from "../js/types.js";
-import { rectCollision, trueWithRatio } from '../js/utils.js';
+import { areRectsColliding, isTrueWithProbability } from '../js/utils.js';
 
 
 class Boundary {
@@ -172,7 +172,7 @@ class Character extends Sprite {
     amount = amount? amount : 1;
     if(isNaN(amount)) {
       console.log('argument should be a number'); 
-      return false;
+      return false; 
     }
     const CURR_HP = this.data.hp;
     if(isNaN(CURR_HP)) {
@@ -268,7 +268,7 @@ class Player extends Character {
     }
   }
   isColliding(rectangle) {
-    const IS_COLLIDING = rectCollision({rect1: this, rect2: rectangle});
+    const IS_COLLIDING = areRectsColliding({rect1: this, rect2: rectangle});
     return IS_COLLIDING;
   }
   getNextStepDirection() {
@@ -358,7 +358,7 @@ class PlayerBattle extends Player {
     return RESULT;
   }
   run() {
-    if(trueWithRatio(this.data.rateRun)) {
+    if(isTrueWithProbability(this.data.rateRun)) {
       this.succeedRun = true;
       return true;
     }else {
