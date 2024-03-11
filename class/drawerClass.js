@@ -168,6 +168,7 @@ class Character extends Sprite {
     return RETURN;    
   }
   recoverHp(amount) {
+    if(this.data.hp === this.data.maxHp) return false;
     amount = amount? amount : 1;
     if(isNaN(amount)) {
       console.log('argument should be a number'); 
@@ -180,8 +181,8 @@ class Character extends Sprite {
     } 
     amount = (this.data.maxHp < CURR_HP + amount)? this.data.maxHp - CURR_HP: amount;
     this.data.hp = CURR_HP + amount;
-    const RETURN = { ok: true, amount: amount, hp: this.data.hp}
-    return RETURN;    
+    const HAS_PLAYER_RECOVERED = { ok: true, amount: amount, hp: this.data.hp}
+    return HAS_PLAYER_RECOVERED;    
   }
   _setPositionToDefault(){
   }

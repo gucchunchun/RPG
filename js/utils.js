@@ -104,4 +104,9 @@ function scrollToBottom(elem) {
     top: SCROLL_HEIGHT - HEIGHT,
   });
 }
-export { rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };
+function isNumCloseToTargetNum(num, targetNum, criteria) {
+  if(isNaN(num) || isNaN(targetNum) || isNaN(criteria)) throw new Error('Arguments should be Numbers');
+  if(targetNum - criteria <= num && num < targetNum + criteria) return true;
+  return false;
+}
+export { isNumCloseToTargetNum, rectCollision, makeMap, trueWithRatio, choiceRandom, addOption, getCheckedValue, containsSame, removeChecked, addBattleDialog, scrollToBottom };

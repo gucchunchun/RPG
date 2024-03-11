@@ -1,6 +1,6 @@
 import { KEYS_INTERFACE, UI_MGR_INTERFACE, CHARACTER_STATE, PLAYER_DATA_TYPE, ENEMY_DATA_TYPE, EVENT } from "../js/types.js";
 import { COLLISION, PATH, FOREST, ITEM, WATER, NAP} from '../data/boundaries.js';
-import { makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../js/utils.js';
+import {isNumCloseToTargetNum,  makeMap, trueWithRatio, choiceRandom, addOption, containsSame, scrollToBottom } from '../js/utils.js';
 import { Sprite, Player, PlayerBattle, EnemyBattle } from './drawerClass.js';
 import { EventBus } from './eventBus.js';
 import { gsap } from '../node_modules/gsap/index.js';
@@ -1057,28 +1057,16 @@ class MapAnimation extends Animation {
       lastTime: 0,
       interval: MapAnimation.MAP_EVENT_INTERVAL
     }
-    this.item = {
-      lastIndex: undefined,
-      lastTime: 0,
-      interval: MapAnimation.MAP_EVENT_INTERVAL
-    }
-    this.water = {
-      lastIndex: undefined,
-      lastTime: 0,
-      interval: MapAnimation.MAP_EVENT_INTERVAL
-    }
-    this.nap = {
-      lastIndex: undefined,
-      lastTime: 0,
-      interval: MapAnimation.MAP_EVENT_INTERVAL
-    }
+    this.indexOfLastItem;
+    this.indexOfLastWaterStation;
+    this.indexOfLastNapStation;
     
     this.boundaryMap = makeMap({array: COLLISION, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.pathMap = makeMap({array: PATH, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.forestMap = makeMap({array: FOREST, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     this.itemMap = makeMap({array: ITEM, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
-    this.waterMap = makeMap({array: WATER, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
-    this.napMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.waterStationMap = makeMap({array: WATER, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
+    this.napStationMap = makeMap({array: NAP, canvas: this.canvas, canvasContent: this.c, offset: this.offSet});
     
     const IMG_BG = new Image();
     this.bg = new Sprite({
@@ -1105,10 +1093,9 @@ class MapAnimation extends Animation {
     });
     IMG_FG_OBJ.src = MapAnimation.FG_SRC;
     
-    this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterMap, ...this.napMap];
+    this.listMovable = [this.bg, this.fg, ...this.boundaryMap, ...this.pathMap, ...this.forestMap, ...this.itemMap, ...this.waterStationMap, ...this.napStationMap];
 
     EVENT_BUS.subscribe(EVENT.levelUp, this.handleLevelUp.bind(this));
-    EVENT_BUS.subscribe(EVENT.encounter, this.handleEncounter.bind(this));
     EVENT_BUS.subscribe(EVENT.battleEnd, this.handleBattleEnd.bind(this));
 
     this._makeEnemyList(this.player.data.lv);
@@ -1121,9 +1108,6 @@ class MapAnimation extends Animation {
   }
   handleRecoverHp() {
     this._stopAnimationFor(this.transTime);
-  }
-  handleEncounter() {
-    this._stopCurrAnimation();
   }
   handleBattleEnd({playerData}) {
     if(!this.player.updateData(playerData)) throw new Error('Fail to Update Player Data at MapAnimation.handleBattleEnd')
@@ -1280,81 +1264,6 @@ class MapAnimation extends Animation {
     }
     }
 
-    if(this.action.lastTime !== 0 && (this.currTime - this.action.lastTime) < this.action.interval) return;
-
-    // アイテムゲット
-    if(this.item.lastTime === 0 || this.item.interval <= (this.currTime - this.item.lastTime)) {
-      for(let i = 0; i < this.itemMap.length; i++) {
-        const BOUNDARY = this.itemMap[i];
-        if(this.player.isColliding(BOUNDARY)) {
-          // 連続したアイテムゲットを防ぐ
-          if(this.item.lastIndex - 2 <= i && i < this.item.lastIndex + 2) {
-            break;
-          }
-
-          const ITEM_KEY = choiceRandom(this.itemList);
-          if(this.player.addItem(ITEM_KEY)) {
-            this.item.lastTime = this.currTime;
-            this.action.lastTime = this.currTime;
-            this.item.lastIndex = i;
-            EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY });
-            // OverlapMsgの表示を待つため
-            this._stopAnimationFor(this.transTime);
-            return;
-          };
-        }
-      }
-    }
-    // HP回復イベント（HPがmaxじゃない時）
-    if(this.player.data.hp !== this.player.data.maxHp) {
-      // 水
-      if(this.water.lastTime === 0 || this.water.interval <= (this.currTime - this.water.lastTime)) {
-        for(let i = 0; i < this.waterMap.length; i++) {
-          const BOUNDARY = this.waterMap[i];
-          if(this.player.isColliding(BOUNDARY)) {
-            // 連続をを防ぐ
-            if(this.water.lastIndex - 1 <= i && i < this.water.lastIndex + 1) {
-              break;
-            }
-            const RESULT = this.player.recoverHp();
-            if(RESULT) {
-              this.water.lastTime = this.currTime;
-              this.action.lastTime = this.currTime;
-              this.water.lastIndex = i;
-              this.player.recoverHp(RESULT.amount);
-              EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: '水を飲んで' });
-              // OverlapMsgの表示を待つため
-              this._stopAnimationFor(this.transTime);
-              return;
-            };
-          }
-        }
-      }
-      // お昼寝
-      if(this.nap.lastTime === 0 || this.nap.interval <= (this.currTime - this.nap.lastTime)) {
-        for(let i = 0; i < this.napMap.length; i++) {
-          const BOUNDARY = this.napMap[i];
-          if(this.player.isColliding(BOUNDARY)) {
-            // 連続をを防ぐ
-            if(this.nap.lastIndex - 1 <= i && i < this.nap.lastIndex + 1) {
-              break;
-            }
-            const RESULT = this.player.recoverHp(2);
-            if(RESULT) {
-              this.nap.lastTime = this.currTime;
-              this.action.lastTime = this.currTime;
-              this.nap.lastIndex = i;
-              this.player.recoverHp(RESULT.amount);
-              EVENT_BUS.publish(EVENT.recoverHp, { amount: RESULT.amount, reason: 'お昼寝をして' });
-              // OverlapMsgの表示を待つため
-              this._stopAnimationFor(this.transTime);
-              return;
-            };
-          }
-        }
-      }
-    }
-
     if(stepped) {
       EVENT_BUS.publish(EVENT.step, {});
       if(this.player.levelUp()) {
@@ -1364,18 +1273,87 @@ class MapAnimation extends Animation {
         }, this.transTime)
         return;
       }
+      if(this.action.lastTime !== 0 && (this.currTime - this.action.lastTime) < this.action.interval) return;
+      if(this._playerItemGet()) return;
+      if(this._playerDrinkWater()) return;
+      if(this._playerTakeNap()) return;
       if(onPath) return;
-      if(this.action.lastTime !== 0 && (this.currTime - this.item.lastTime) < this.item.interval) return;
-      const RATIO = onForest? this.player.data.rateEncounter*2: this.player.data.rateEncounter;
-      if(trueWithRatio(RATIO)) {
-        this.player.stop();
-        this.keys.lastKey = undefined;
-        this.action.lastTime = new Date().getTime();
-        const ENEMY_KEY = choiceRandom(this.enemyList);
-        this.player.data.enemy.push(ENEMY_KEY);
-        EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: {...this.gameDatabase.enemy[ENEMY_KEY]}});
+      const ENCOUNTER_RATIO = onForest? this.player.data.rateEncounter * 1.5: this.player.data.rateEncounter;
+      if(!this._playerEncounterEnemy(ENCOUNTER_RATIO)) return;
+      this._stopCurrAnimation();
+    }
+  }
+  _playerCollidingIndex(map) {
+    for(let indexMap = 0; indexMap < map.length; indexMap++) {
+      const BOUNDARY = map[indexMap];
+      if(this.player.isColliding(BOUNDARY)) {
+        return indexMap;
       }
     }
+    return false;
+  }
+  _playerItemGet() {
+    const INDEX_ITEM_MAP = this._playerCollidingIndex(this.itemMap);
+    // returnは0である可能性もあるため！は利用できない
+    if(INDEX_ITEM_MAP === false) return false;
+    // 連続したアイテムゲットを防ぐ
+    if(this.indexOfLastWaterStation) {
+      if(isNumCloseToTargetNum(INDEX_ITEM_MAP, this.indexOfLastWaterStation, 2)) return false;
+    }
+    const ITEM_KEY = choiceRandom(this.itemList);
+    if(this.player.addItem(ITEM_KEY)) {
+      this.indexOfLastItem = INDEX_ITEM_MAP;
+      this.action.lastTime = this.currTime;
+      EVENT_BUS.publish(EVENT.getItem, { itemKey: ITEM_KEY });
+      // OverlapMsgの表示を待つため
+      this._stopAnimationFor(this.transTime);
+      return true;
+    };
+    return false;
+  }
+  _playerDrinkWater() {
+    const INDEX_WATER_STATION_MAP = this._playerCollidingIndex(this.waterStationMap);
+    // returnは0である可能性もあるため！は利用できない
+    if(INDEX_WATER_STATION_MAP === false) return false;
+    // 連続したアイテムゲットを防ぐ
+    if(this.indexOfLastWaterStation) {
+      if(isNumCloseToTargetNum(INDEX_WATER_STATION_MAP, this.indexOfLastWaterStation, 2)) return false;
+    }
+    const HAS_PLAYER_RECOVERED = this.player.recoverHp();
+    if(!HAS_PLAYER_RECOVERED) return false;
+    this.action.lastTime = this.currTime;
+    this.indexOfLastWaterStation = INDEX_WATER_STATION_MAP;
+    EVENT_BUS.publish(EVENT.recoverHp, { amount: HAS_PLAYER_RECOVERED.amount, reason: '水を飲んで' });
+    // OverlapMsgの表示を待つため
+    this._stopAnimationFor(this.transTime);
+    return true;
+  }
+  _playerTakeNap() {
+    const INDEX_NAP_STATION_MAP = this._playerCollidingIndex(this.napStationMap);
+    // returnは0である可能性もあるため！は利用できない
+    if(INDEX_NAP_STATION_MAP === false) return false;
+    // 連続したアイテムゲットを防ぐ
+    if(this.indexOfLastNapStation) {
+      if(isNumCloseToTargetNum(INDEX_NAP_STATION_MAP, this.indexOfLastNapStation, 2)) return false;
+    }
+    const HAS_PLAYER_RECOVERED = this.player.recoverHp(2);
+    if(!HAS_PLAYER_RECOVERED) return false;
+    this.action.lastTime = this.currTime;
+    this.indexOfLastNapStation = INDEX_NAP_STATION_MAP;
+    EVENT_BUS.publish(EVENT.recoverHp, { amount: HAS_PLAYER_RECOVERED.amount, reason: 'お昼寝をして' });
+    // OverlapMsgの表示を待つため
+    this._stopAnimationFor(this.transTime);
+    return true;
+  }
+  _playerEncounterEnemy(encounterRatio) {
+    if(!trueWithRatio(encounterRatio)) return false;
+    this.player.stop();
+    this.keys.lastKey = undefined;
+    this.action.lastTime = this.currTime;
+    const ENEMY_KEY = choiceRandom(this.enemyList);
+    this.player.data.enemy.push(ENEMY_KEY);
+    EVENT_BUS.publish(EVENT.encounter, {playerData: this.player.data, enemyData: {...this.gameDatabase.enemy[ENEMY_KEY]}});
+    return true;
   }
   _render() {
     this.bg.draw();
@@ -1391,10 +1369,10 @@ class MapAnimation extends Animation {
     this.itemMap.forEach(boundary=>{
       boundary.draw();
     })
-    this.waterMap.forEach(boundary=>{
+    this.waterStationMap.forEach(boundary=>{
       boundary.draw();
     })
-    this.napMap.forEach(boundary=>{
+    this.napStationMap.forEach(boundary=>{
       boundary.draw();
     })
     this.player.draw();
